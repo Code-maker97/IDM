@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+  background: #09090b;
+  color: #f4f4f5;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+.font-heading { font-family: "Space Grotesk", "Cabinet Grotesk", sans-serif; letter-spacing: -0.02em; }
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #09090b !important;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+.leaflet-control-attribution {
+  background: rgba(9,9,11,0.6) !important;
+  color: #a1a1aa !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: #a1a1aa !important; }
+.leaflet-control-zoom a {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+/* Glassmorphism bottom sheet */
+.glass-sheet {
+  background: rgba(9,9,11,0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(39,39,42,0.8);
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+
+/* Pulsing SOS */
+@keyframes sos-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6), 0 0 30px rgba(239,68,68,0.55); }
+  50% { box-shadow: 0 0 0 14px rgba(239,68,68,0), 0 0 30px rgba(239,68,68,0.55); }
+}
+.sos-pulse { animation: sos-pulse 1.8s ease-out infinite; }
+
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.slide-up { animation: slide-up 260ms ease-out; }
+
+/* Custom map marker */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Focus */
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid #f4f4f5;
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection { background: #f4f4f5; color: #09090b; }
