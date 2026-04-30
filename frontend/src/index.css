@@ -2,58 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
+:root { color-scheme: light; }
 
 html, body, #root {
   height: 100%;
-  background: #09090b;
-  color: #f4f4f5;
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  background: #f7f6f1;
+  color: #1a1a1a;
+  font-family: "Noto Sans", "Mukta", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 * { box-sizing: border-box; }
 
-.font-heading { font-family: "Space Grotesk", "Cabinet Grotesk", sans-serif; letter-spacing: -0.02em; }
+.font-heading { font-family: "Noto Serif", "Tinos", Georgia, serif; letter-spacing: -0.005em; }
+.font-hindi { font-family: "Noto Sans Devanagari", "Mukta", sans-serif; }
 
-/* Leaflet overrides for dark theme */
+/* Tricolor strip */
+.tricolor {
+  display: flex;
+  height: 4px;
+  width: 100%;
+}
+.tricolor > span { flex: 1; }
+.tricolor > span:nth-child(1) { background: #ff9933; }
+.tricolor > span:nth-child(2) { background: #ffffff; border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; }
+.tricolor > span:nth-child(3) { background: #138808; }
+
+/* Leaflet light theme adjustments */
 .leaflet-container {
-  background: #09090b !important;
-  font-family: "IBM Plex Sans", sans-serif;
+  background: #e8eef5 !important;
+  font-family: "Noto Sans", sans-serif;
 }
 .leaflet-control-attribution {
-  background: rgba(9,9,11,0.6) !important;
-  color: #a1a1aa !important;
+  background: rgba(255,255,255,0.85) !important;
+  color: #1a1a1a !important;
   font-size: 10px !important;
 }
-.leaflet-control-attribution a { color: #a1a1aa !important; }
+.leaflet-control-attribution a { color: #0b3d91 !important; }
 .leaflet-control-zoom a {
-  background: #18181b !important;
-  color: #f4f4f5 !important;
-  border-color: #27272a !important;
-}
-
-/* Glassmorphism bottom sheet */
-.glass-sheet {
-  background: rgba(9,9,11,0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(39,39,42,0.8);
-  box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+  background: #ffffff !important;
+  color: #0b3d91 !important;
+  border-color: #cfcfcf !important;
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #f0f0ec; }
+::-webkit-scrollbar-thumb { background: #c4c4be; border-radius: 4px; }
 
 /* Pulsing SOS */
 @keyframes sos-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6), 0 0 30px rgba(239,68,68,0.55); }
-  50% { box-shadow: 0 0 0 14px rgba(239,68,68,0), 0 0 30px rgba(239,68,68,0.55); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192,32,43,0.55), 0 8px 22px rgba(192,32,43,0.45); }
+  50% { box-shadow: 0 0 0 16px rgba(192,32,43,0), 0 8px 22px rgba(192,32,43,0.45); }
 }
 .sos-pulse { animation: sos-pulse 1.8s ease-out infinite; }
 
@@ -61,19 +62,102 @@ html, body, #root {
   from { transform: translateY(16px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
-.slide-up { animation: slide-up 260ms ease-out; }
+.slide-up { animation: slide-up 240ms ease-out; }
 
-/* Custom map marker */
-.custom-marker {
-  background: transparent !important;
-  border: none !important;
+.custom-marker { background: transparent !important; border: none !important; }
+
+/* Government paper card */
+.gov-card {
+  background: #ffffff;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(11,61,145,0.04);
 }
 
-/* Focus */
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid #f4f4f5;
-  outline-offset: 2px;
+/* Official label */
+.gov-label {
+  font-family: "Noto Sans", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #5d5d5d;
 }
 
-/* Selection */
-::selection { background: #f4f4f5; color: #09090b; }
+/* Inputs */
+.gov-input {
+  background: #ffffff;
+  border: 1px solid #cfcfcf;
+  border-radius: 4px;
+  padding: 0.55rem 0.7rem;
+  font-size: 14px;
+  width: 100%;
+}
+.gov-input:focus { outline: none; border-color: #0b3d91; box-shadow: 0 0 0 3px rgba(11,61,145,0.15); }
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #0b3d91; outline-offset: 2px;
+}
+::selection { background: #ff9933; color: #1a1a1a; }
+
+/* Stamp watermark */
+.stamp {
+  border: 1.5px dashed #0b3d91;
+  color: #0b3d91;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* Ashoka chakra placeholder (24-spoke navy ring) */
+.chakra {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #0b3d91;
+  position: relative;
+  display: inline-block;
+  background: radial-gradient(circle at center, #fff 30%, transparent 30%);
+}
+.chakra::before, .chakra::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg,
+      #0b3d91 0deg 2deg, transparent 2deg 15deg,
+      #0b3d91 15deg 17deg, transparent 17deg 30deg,
+      #0b3d91 30deg 32deg, transparent 32deg 45deg,
+      #0b3d91 45deg 47deg, transparent 47deg 60deg,
+      #0b3d91 60deg 62deg, transparent 62deg 75deg,
+      #0b3d91 75deg 77deg, transparent 77deg 90deg,
+      #0b3d91 90deg 92deg, transparent 92deg 105deg,
+      #0b3d91 105deg 107deg, transparent 107deg 120deg,
+      #0b3d91 120deg 122deg, transparent 122deg 135deg,
+      #0b3d91 135deg 137deg, transparent 137deg 150deg,
+      #0b3d91 150deg 152deg, transparent 152deg 165deg,
+      #0b3d91 165deg 167deg, transparent 167deg 180deg,
+      #0b3d91 180deg 182deg, transparent 182deg 195deg,
+      #0b3d91 195deg 197deg, transparent 197deg 210deg,
+      #0b3d91 210deg 212deg, transparent 212deg 225deg,
+      #0b3d91 225deg 227deg, transparent 227deg 240deg,
+      #0b3d91 240deg 242deg, transparent 242deg 255deg,
+      #0b3d91 255deg 257deg, transparent 257deg 270deg,
+      #0b3d91 270deg 272deg, transparent 272deg 285deg,
+      #0b3d91 285deg 287deg, transparent 287deg 300deg,
+      #0b3d91 300deg 302deg, transparent 302deg 315deg,
+      #0b3d91 315deg 317deg, transparent 317deg 330deg,
+      #0b3d91 330deg 332deg, transparent 332deg 345deg,
+      #0b3d91 345deg 347deg, transparent 347deg 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 35%, #000 35%, #000 95%, transparent 95%);
+          mask: radial-gradient(circle, transparent 35%, #000 35%, #000 95%, transparent 95%);
+}
+.chakra::after { background: #0b3d91; -webkit-mask: radial-gradient(circle, #000 0 4px, transparent 4px); mask: radial-gradient(circle, #000 0 4px, transparent 4px); }
+
+/* Scheme tile hover */
+.scheme-tile { transition: all 200ms ease-out; }
+.scheme-tile:hover { transform: translateY(-2px); border-color: #0b3d91; box-shadow: 0 8px 22px rgba(11,61,145,0.10); }

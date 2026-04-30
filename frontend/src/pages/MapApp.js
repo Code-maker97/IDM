@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Polyline, Marker, Popup, CircleMarker, useMap } from "react-leaflet";
+import React, { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Shield, Siren, MessageCircle, Users, AlertTriangle, Navigation2, LogOut, LayoutDashboard, Search, X, Crosshair, MapPin } from "lucide-react";
+import { Shield, Siren, MessageCircle, Users, AlertTriangle, LogOut, LayoutDashboard, Search, Crosshair, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../App";
 import { api } from "../lib/api";
@@ -10,6 +10,7 @@ import SOSPanel from "../components/SOSPanel";
 import AIChatbot from "../components/AIChatbot";
 import IncidentReportModal from "../components/IncidentReportModal";
 import TrustedContactsModal from "../components/TrustedContactsModal";
+import { Tricolor } from "../components/GovChrome";
 
 // Leaflet default icon fix
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,38 +20,29 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const DEFAULT_CENTER = [12.9716, 77.5946]; // Bangalore
+const DEFAULT_CENTER = [12.9716, 77.5946]; // Bengaluru
 
-function RecenterMap({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) map.setView(center, map.getZoom() < 14 ? 14 : map.getZoom(), { animate: true });
-  }, [center, map]);
-  return null;
-}
+const incidentIcon = (severity) => {
+  const color = severity >= 3 ? "#c0202b" : severity === 2 ? "#d97706" : "#ca8a04";
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 2px ${color}55"></div>`,
+  });
+};
+const userIcon = L.divIcon({
+  className: "custom-marker",
+  html: `<div style="width:18px;height:18px;border-radius:50%;background:#0b3d91;border:3px solid #fff;box-shadow:0 0 0 3px rgba(11,61,145,0.35)"></div>`,
+});
 
 function FitRoute({ coords }) {
   const map = useMap();
   useEffect(() => {
-    if (!coords || coords.length === 0) return;
+    if (!coords?.length) return;
     const latlngs = coords.map((c) => [c[1], c[0]]);
     map.fitBounds(latlngs, { padding: [60, 60] });
   }, [coords, map]);
   return null;
 }
-
-const incidentIcon = (severity) => {
-  const color = severity >= 3 ? "#ef4444" : severity === 2 ? "#f59e0b" : "#eab308";
-  return L.divIcon({
-    className: "custom-marker",
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #09090b;box-shadow:0 0 10px ${color}"></div>`,
-  });
-};
-
-const userIcon = L.divIcon({
-  className: "custom-marker",
-  html: `<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 12px rgba(59,130,246,0.8)"></div>`,
-});
 
 export default function MapApp() {
   const { user, logout } = useAuth();
@@ -68,7 +60,6 @@ export default function MapApp() {
     return h >= 19 || h < 6 ? "night" : "day";
   });
 
-  // Geolocate
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -78,7 +69,6 @@ export default function MapApp() {
     );
   }, []);
 
-  // Load incidents
   const loadIncidents = async () => {
     try {
       const res = await api.get("/incidents", { params: { limit: 200 } });
@@ -95,15 +85,70 @@ export default function MapApp() {
   const mapCenter = myPos || DEFAULT_CENTER;
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-base text-zinc-100">
-      {/* MAP (z-0) */}
-      <div className="absolute inset-0 z-0">
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-canvas text-ink flex flex-col">
+      {/* TOP STRIP — government chrome */}
+      <Tricolor />
+      <header className="bg-navy-700 text-white relative z-30">
+        <div className="px-4 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="chakra shrink-0" style={{ filter: "invert(1)" }} aria-label="emblem" />
+            <div className="leading-tight min-w-0">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className="font-heading font-bold text-base sm:text-lg whitespace-nowrap">SurakshitPath</span>
+                <span className="font-hindi text-sm hidden sm:inline">सुरक्षित पथ</span>
+              </div>
+              <div className="text-[10px] opacity-80 truncate">
+                Citizen portal · {user?.name || "Signed in"}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              data-testid="toggle-time-btn"
+              onClick={() => setTimeOfDay(timeOfDay === "night" ? "day" : "night")}
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded text-[11px] font-medium"
+              title="Toggle day/night model"
+            >
+              {timeOfDay === "night" ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline uppercase tracking-wider">{timeOfDay}</span>
+            </button>
+            <button
+              data-testid="open-contacts-btn"
+              onClick={() => setShowContacts(true)}
+              className="bg-white/10 hover:bg-white/20 p-2 rounded"
+              title="Trusted contacts"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+            {user?.is_admin && (
+              <Link
+                to="/admin"
+                data-testid="admin-nav-link"
+                className="bg-saffron text-ink hover:bg-saffron/85 p-2 rounded"
+                title="Admin Console"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+              </Link>
+            )}
+            <button
+              data-testid="logout-btn"
+              onClick={logout}
+              className="bg-white/10 hover:bg-white/20 p-2 rounded"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* MAP */}
+      <div className="relative flex-1">
         <MapContainer center={mapCenter} zoom={14} scrollWheelZoom className="h-full w-full" zoomControl={false}>
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; OSM &copy; CARTO'
+            url="https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png"
+            attribution='&copy; OpenStreetMap &copy; CARTO'
           />
-          <RecenterMap center={myPos} />
           {selectedRoute && <FitRoute coords={selectedRoute.geometry} />}
 
           {myPos && (
@@ -112,7 +157,6 @@ export default function MapApp() {
             </Marker>
           )}
 
-          {/* Incidents */}
           {incidents.map((inc) => (
             <Marker key={inc.incident_id} position={[inc.lat, inc.lng]} icon={incidentIcon(inc.severity || 2)}>
               <Popup>
@@ -125,11 +169,10 @@ export default function MapApp() {
             </Marker>
           ))}
 
-          {/* Route polylines */}
           {routes.map((r) => {
             const latlngs = r.geometry.map((c) => [c[1], c[0]]);
             const isSelected = r.route_id === selectedRouteId;
-            const color = r.level === "safe" ? "#10b981" : r.level === "caution" ? "#f59e0b" : "#ef4444";
+            const color = r.level === "safe" ? "#138808" : r.level === "caution" ? "#d97706" : "#c0202b";
             return (
               <Polyline
                 key={r.route_id}
@@ -137,7 +180,7 @@ export default function MapApp() {
                 pathOptions={{
                   color,
                   weight: isSelected ? 7 : 4,
-                  opacity: isSelected ? 0.95 : 0.45,
+                  opacity: isSelected ? 0.95 : 0.5,
                   dashArray: isSelected ? null : "6 8",
                 }}
                 eventHandlers={{ click: () => setSelectedRouteId(r.route_id) }}
@@ -145,111 +188,63 @@ export default function MapApp() {
             );
           })}
         </MapContainer>
-      </div>
 
-      {/* TOP BAR */}
-      <header className="absolute top-0 inset-x-0 z-20 px-4 pt-4 pointer-events-none">
-        <div className="flex items-center justify-between gap-2 pointer-events-auto">
-          <div className="flex items-center gap-2 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-full px-4 py-2">
-            <Shield className="w-4 h-4 text-zinc-100" strokeWidth={2.2} />
-            <span className="font-heading font-bold text-sm tracking-tight">AEGIS</span>
-            <span className="text-[10px] font-heading uppercase tracking-[0.2em] text-zinc-500 ml-1">
-              · {timeOfDay}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              data-testid="toggle-time-btn"
-              onClick={() => setTimeOfDay(timeOfDay === "night" ? "day" : "night")}
-              className="text-[10px] font-heading uppercase tracking-[0.2em] px-3 py-2 bg-zinc-950/80 border border-zinc-800 rounded-full hover:border-zinc-600"
-            >
-              Switch {timeOfDay === "night" ? "day" : "night"}
-            </button>
-            <button
-              data-testid="open-contacts-btn"
-              onClick={() => setShowContacts(true)}
-              className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-full p-2.5 hover:border-zinc-600"
-              title="Trusted contacts"
-            >
-              <Users className="w-4 h-4" />
-            </button>
-            {user?.is_admin && (
-              <Link
-                to="/admin"
-                data-testid="admin-nav-link"
-                className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-full p-2.5 hover:border-zinc-600"
-                title="Admin"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-              </Link>
-            )}
-            <button
-              data-testid="logout-btn"
-              onClick={logout}
-              className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800 rounded-full p-2.5 hover:border-zinc-600"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Search button */}
+        {/* Quick search bar (when sheet closed) */}
         {!showSearch && (
-          <div className="mt-3 pointer-events-auto">
+          <div className="absolute top-3 inset-x-3 z-20">
             <button
               data-testid="open-search-btn"
               onClick={() => setShowSearch(true)}
-              className="w-full bg-zinc-950/85 backdrop-blur-xl border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3 hover:border-zinc-600 text-left"
+              className="w-full bg-white border border-rule rounded-md px-4 py-3 flex items-center gap-3 hover:border-navy-700 text-left shadow-gov"
             >
-              <Search className="w-4 h-4 text-zinc-400" />
-              <span className="text-sm text-zinc-400">Where do you want to go?</span>
+              <Search className="w-4 h-4 text-navy-700" />
+              <span className="text-sm text-muted">Where do you want to go?</span>
             </button>
           </div>
         )}
-      </header>
 
-      {/* Recenter */}
-      {myPos && (
+        {/* Recenter */}
+        {myPos && (
+          <button
+            data-testid="recenter-btn"
+            onClick={() => setMyPos([...myPos])}
+            className="absolute right-3 bottom-44 z-20 bg-white border border-rule rounded-full p-3 hover:border-navy-700 shadow-gov"
+            title="Recenter"
+          >
+            <Crosshair className="w-4 h-4 text-navy-700" />
+          </button>
+        )}
+
+        {/* Report */}
         <button
-          data-testid="recenter-btn"
-          onClick={() => setMyPos([...myPos])}
-          className="absolute right-4 bottom-44 z-30 bg-zinc-950/85 backdrop-blur-xl border border-zinc-800 rounded-full p-3 hover:border-zinc-600"
-          title="Recenter"
+          data-testid="open-report-btn"
+          onClick={() => setShowReport(true)}
+          className="absolute left-3 bottom-44 z-20 bg-saffron text-ink rounded-full p-3 shadow-gov hover:scale-105 transition-transform"
+          title="Report incident"
         >
-          <Crosshair className="w-4 h-4" />
+          <AlertTriangle className="w-5 h-5" strokeWidth={2.5} />
         </button>
-      )}
 
-      {/* Report Incident FAB */}
-      <button
-        data-testid="open-report-btn"
-        onClick={() => setShowReport(true)}
-        className="absolute left-4 bottom-44 z-30 bg-amber-500 text-black rounded-full p-3 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-105 transition-transform"
-        title="Report incident"
-      >
-        <AlertTriangle className="w-5 h-5" strokeWidth={2.5} />
-      </button>
+        {/* AI Chat */}
+        <button
+          data-testid="ai-safety-chat-trigger"
+          onClick={() => setShowChat(true)}
+          className="absolute left-3 bottom-28 z-30 bg-navy-700 hover:bg-navy-800 text-white rounded-full pl-3 pr-4 py-3 shadow-gov flex items-center gap-2"
+        >
+          <MessageCircle className="w-4 h-4" strokeWidth={2.5} />
+          <span className="text-xs font-semibold">Aegis AI</span>
+        </button>
 
-      {/* AI Chat FAB */}
-      <button
-        data-testid="ai-safety-chat-trigger"
-        onClick={() => setShowChat(true)}
-        className="absolute left-4 bottom-28 z-40 bg-blue-600 text-white rounded-full px-4 py-3 shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
-      >
-        <MessageCircle className="w-5 h-5" strokeWidth={2.5} />
-        <span className="font-heading text-xs font-semibold uppercase tracking-wider">Aegis AI</span>
-      </button>
-
-      {/* SOS button */}
-      <button
-        data-testid="sos-panic-button"
-        onClick={() => setShowSOS(true)}
-        className="absolute right-4 bottom-28 z-40 w-16 h-16 rounded-full bg-sos text-white font-heading font-bold text-lg shadow-sos sos-pulse hover:scale-105 transition-transform flex items-center justify-center"
-      >
-        SOS
-      </button>
+        {/* SOS */}
+        <button
+          data-testid="sos-panic-button"
+          onClick={() => setShowSOS(true)}
+          className="absolute right-3 bottom-28 z-30 w-16 h-16 rounded-full bg-sos text-white font-heading font-bold text-base sos-pulse hover:scale-105 transition-transform flex flex-col items-center justify-center"
+        >
+          <Siren className="w-5 h-5" strokeWidth={2.5} />
+          <span className="text-[10px] tracking-widest mt-0.5">SOS</span>
+        </button>
+      </div>
 
       {/* Bottom search sheet */}
       {showSearch && (

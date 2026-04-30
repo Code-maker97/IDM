@@ -1,7 +1,8 @@
 import React from "react";
-import { Shield, MapPin, Siren, MessageCircle, ArrowRight } from "lucide-react";
+import { Shield, Siren, MapPin, MessageCircle, Users, AlertTriangle, ArrowRight, FileText, Phone, ExternalLink } from "lucide-react";
 import { useAuth } from "../App";
 import { Navigate } from "react-router-dom";
+import { Masthead, GovFooter } from "../components/GovChrome";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 function startLogin() {
@@ -9,98 +10,169 @@ function startLogin() {
   window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
 }
 
-const BG_IMG =
-  "https://static.prod-images.emergentagent.com/jobs/cbb35034-fbd1-4812-a2d2-e1269305a848/images/b793fc9ea8d16777d85ca8203ca682be74dca7f54defd57a7c51b56ec6f95009.png";
+const SCHEMES = [
+  { icon: MapPin, label: "Safe-Route Navigation", desc: "Walk routes scored by lighting, crowd & incident density." },
+  { icon: Siren, label: "Emergency SOS", desc: "One-tap alert with live location to trusted contacts." },
+  { icon: AlertTriangle, label: "Incident Reporting", desc: "Crowdsource hazards — make every traveler safer." },
+  { icon: MessageCircle, label: "AI Safety Assistant", desc: "Government-curated guidance, available 24×7." },
+  { icon: Users, label: "Trusted Contacts", desc: "Add family members for instant SMS alerts." },
+  { icon: Shield, label: "Admin Dashboard", desc: "Visualisation for civic bodies & police partners." },
+];
+
+const STATS = [
+  { num: "8 cr+", label: "Women & students in urban India" },
+  { num: "3.6×", label: "Higher unsafe-route reports after 9 PM" },
+  { num: "112", label: "National Emergency Helpline integration" },
+  { num: "24×7", label: "Real-time AI risk monitoring" },
+];
 
 export default function Landing() {
   const { user, loading } = useAuth();
   if (!loading && user) return <Navigate to="/app" replace />;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-base text-zinc-100">
-      {/* Background image */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `url(${BG_IMG})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: "brightness(0.45) saturate(0.8)",
-        }}
-      />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-base/70 via-base/50 to-base" />
+    <div className="min-h-screen flex flex-col bg-canvas text-ink">
+      <Masthead />
 
-      {/* Top bar */}
-      <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
-        <div className="flex items-center gap-2.5">
-          <Shield className="w-6 h-6 text-zinc-100" strokeWidth={2.2} />
-          <span className="font-heading font-bold text-lg tracking-tight">AEGIS</span>
+      {/* Notice strip */}
+      <div className="bg-saffron/15 border-b border-saffron/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-[12px] flex items-start sm:items-center gap-2">
+          <span className="stamp shrink-0">PROTOTYPE</span>
+          <span>
+            <strong>Notice:</strong> Working prototype submitted for BGI Hackathon 2026 by Team Innovaters.
+            Sign in with Google to experience the citizen interface.
+          </span>
         </div>
-        <button
-          data-testid="login-nav-button"
-          onClick={startLogin}
-          className="text-xs font-heading uppercase tracking-[0.2em] px-4 py-2 border border-zinc-700 hover:border-zinc-400 transition-colors rounded-full"
-        >
-          Sign in
-        </button>
-      </header>
+      </div>
 
       {/* Hero */}
-      <main className="relative z-10 px-6 sm:px-10 pt-10 sm:pt-20 max-w-3xl">
-        <div className="text-xs font-heading uppercase tracking-[0.3em] text-zinc-400 mb-6 flex items-center gap-3">
-          <span className="inline-block w-8 h-px bg-zinc-500" />
-          Safe navigation, reimagined
+      <section className="bg-white border-b border-rule">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <div className="gov-label mb-4 text-navy-700">Citizen-facing safety initiative</div>
+            <h1 className="font-heading text-3xl sm:text-5xl font-bold text-ink leading-[1.05] mb-4">
+              Walk safer.
+              <br />
+              <span className="text-navy-700">Reach home, every time.</span>
+            </h1>
+            <p className="font-hindi text-navy-700 text-lg sm:text-xl mb-5">सुरक्षित पथ — हर नागरिक का अधिकार।</p>
+            <p className="text-muted leading-relaxed text-base mb-6 max-w-xl">
+              <strong>SurakshitPath</strong> is an AI-driven safe-route navigation platform for
+              women, students, the elderly, and vulnerable urban citizens. It evaluates every walk
+              by <em>lighting</em>, <em>crowd density</em>, <em>reported incidents</em>, and time of day —
+              and recommends the safest path, not just the shortest.
+            </p>
+
+            <div className="flex flex-wrap gap-3 items-center">
+              <button
+                data-testid="get-started-btn"
+                onClick={startLogin}
+                className="group inline-flex items-center gap-2.5 bg-navy-700 hover:bg-navy-800 text-white font-semibold px-6 py-3 rounded text-sm shadow-gov transition-colors"
+              >
+                Sign in with Google
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+              <a
+                href="#features"
+                className="inline-flex items-center gap-2 border border-navy-700 text-navy-700 hover:bg-navy-50 font-semibold px-6 py-3 rounded text-sm transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                View capabilities
+              </a>
+              <a
+                href="tel:112"
+                className="inline-flex items-center gap-2 text-sos hover:underline font-semibold text-sm"
+              >
+                <Phone className="w-4 h-4" />
+                Emergency · dial 112
+              </a>
+            </div>
+          </div>
+
+          {/* Right: official stats card */}
+          <div className="gov-card p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="gov-label">At a glance</div>
+              <span className="text-[10px] font-mono text-muted">Source: NCRB & MoSJE briefings</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {STATS.map((s, i) => (
+                <div key={i} className="border border-rule p-4 rounded">
+                  <div className="font-heading text-3xl text-navy-700 font-bold leading-none">{s.num}</div>
+                  <div className="text-[12px] text-muted mt-1.5 leading-snug">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 border border-saffron/50 bg-saffron/10 rounded p-3 text-[12px] flex items-start gap-2">
+              <Shield className="w-4 h-4 text-navy-700 shrink-0 mt-0.5" />
+              <span>
+                Designed for integration with city police FIR portals (e.g., MP Citizen Police),
+                municipal CCTV / lighting maps, and the national 112 helpline.
+              </span>
+            </div>
+          </div>
         </div>
-        <h1 className="font-heading text-5xl sm:text-7xl font-bold leading-[0.95] tracking-tight mb-6">
-          Walk with<br />
-          <span className="text-zinc-400">quiet</span> confidence.
-        </h1>
-        <p className="text-zinc-400 text-base sm:text-lg max-w-xl leading-relaxed mb-10">
-          Aegis analyzes lighting, reported incidents, and crowd density in real time
-          to recommend the <span className="text-zinc-100">safest</span> route —
-          day or night. One-tap SOS shares your live location with trusted contacts.
-        </p>
+      </section>
 
-        <button
-          data-testid="get-started-btn"
-          onClick={startLogin}
-          className="group inline-flex items-center gap-3 bg-white text-black font-heading font-semibold px-7 py-4 rounded-full hover:bg-zinc-200 transition-all"
-        >
-          Get started with Google
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-        </button>
-
-        <div className="text-xs text-zinc-500 mt-4 font-mono">
-          Free · No app install required · Works on any phone
+      {/* Features (gov scheme tile style) */}
+      <section id="features" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-10 sm:py-14">
+        <div className="flex items-baseline justify-between gap-4 mb-6">
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink">Citizen Services</h2>
+          <span className="font-hindi text-muted text-sm hidden sm:block">नागरिक सेवाएँ</span>
         </div>
-      </main>
-
-      {/* Feature strip */}
-      <section className="relative z-10 px-6 sm:px-10 mt-24 sm:mt-32 pb-28">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { icon: MapPin, label: "Safe routing", desc: "Dynamic scoring across incidents, lighting & crowd." },
-            { icon: Siren, label: "One-tap SOS", desc: "Live location fired off to every trusted contact." },
-            { icon: Shield, label: "Crowd-sourced", desc: "Community reports make every traveler safer." },
-            { icon: MessageCircle, label: "AI assistant", desc: "Aegis chat guides you when things feel off." },
-          ].map(({ icon: Icon, label, desc }, i) => (
-            <div
-              key={i}
-              className="border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-sm p-5 rounded-2xl hover:border-zinc-600 hover:-translate-y-1 transition-all"
-            >
-              <Icon className="w-5 h-5 text-zinc-300 mb-4" strokeWidth={2} />
-              <div className="font-heading font-semibold text-sm mb-1">{label}</div>
-              <div className="text-xs text-zinc-500 leading-relaxed">{desc}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {SCHEMES.map(({ icon: Icon, label, desc }, i) => (
+            <div key={i} className="gov-card scheme-tile p-5">
+              <div className="w-10 h-10 rounded bg-navy-50 border border-navy-100 flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5 text-navy-700" strokeWidth={2} />
+              </div>
+              <div className="font-semibold text-ink text-sm mb-1">{label}</div>
+              <div className="text-[12.5px] text-muted leading-relaxed">{desc}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-zinc-900 px-6 sm:px-10 py-5 flex items-center justify-between">
-        <div className="text-xs text-zinc-600 font-mono">© 2026 Aegis · Built with care</div>
-        <div className="text-xs text-zinc-600 font-heading uppercase tracking-[0.2em]">v1.0</div>
-      </footer>
+      {/* How it works */}
+      <section className="bg-white border-y border-rule">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+          <div className="flex items-baseline justify-between gap-4 mb-6">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink">How it works</h2>
+            <span className="font-hindi text-muted text-sm hidden sm:block">यह कैसे काम करता है</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              { n: "01", t: "Sign in", d: "Citizen logs in securely with verified Google account." },
+              { n: "02", t: "Plan", d: "Enter destination — AI computes safest path using live data." },
+              { n: "03", t: "Travel", d: "Follow route. Report any hazard with one tap on the map." },
+              { n: "04", t: "Alert", d: "If unsafe — SOS pings every trusted contact with live GPS." },
+            ].map((s, i) => (
+              <div key={i} className="border-l-4 border-navy-700 pl-4 py-1">
+                <div className="font-mono text-saffron text-sm font-bold">{s.n}</div>
+                <div className="font-semibold mt-1">{s.t}</div>
+                <div className="text-[12.5px] text-muted leading-relaxed mt-1">{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Acknowledgements */}
+      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-10">
+        <div className="gov-card p-5 sm:p-6">
+          <div className="gov-label mb-2">Research & Data Sources</div>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[13px] text-muted list-disc pl-5">
+            <li>Urban safety studies — spatial data for human-centric navigation</li>
+            <li>Public crime portals (e.g., MP Citizen Police FIR records)</li>
+            <li>OpenStreetMap & OSRM routing — open city-level data</li>
+            <li>AI/ML risk-assessment models for dynamic scoring</li>
+            <li>National 112 Emergency Response Support System</li>
+            <li>Municipal CCTV / lighting / crowd density maps</li>
+          </ul>
+        </div>
+      </section>
+
+      <GovFooter />
     </div>
   );
 }

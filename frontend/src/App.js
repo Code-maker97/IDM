@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import Landing from "./pages/Landing";
 import MapApp from "./pages/MapApp";
 import Admin from "./pages/Admin";
-import { api } from "./lib/api";
+import { api, setToken } from "./lib/api";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -35,6 +35,7 @@ function AuthProvider({ children }) {
 
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch {}
+    setToken(null);
     setUser(null);
   };
 
@@ -66,6 +67,7 @@ function AuthCallback() {
     (async () => {
       try {
         const res = await api.post("/auth/session", { session_id: sessionId });
+        if (res.data?.session_token) setToken(res.data.session_token);
         setUser(res.data.user);
         window.history.replaceState({}, "", "/app");
         navigate("/app", { replace: true, state: { user: res.data.user } });

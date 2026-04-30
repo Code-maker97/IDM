@@ -3,24 +3,36 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        heading: ["'Cabinet Grotesk'", "'Space Grotesk'", "sans-serif"],
-        body: ["'IBM Plex Sans'", "system-ui", "sans-serif"],
+        heading: ["'Noto Serif'", "'Tinos'", "Georgia", "serif"],
+        body: ["'Noto Sans'", "'Mukta'", "system-ui", "sans-serif"],
+        hindi: ["'Noto Sans Devanagari'", "'Mukta'", "sans-serif"],
         mono: ["'JetBrains Mono'", "monospace"],
       },
       colors: {
-        base: "#09090b",
-        surface: "#18181b",
-        border: "#27272a",
-        sos: "#ef4444",
-        safe: "#10b981",
-        caution: "#f59e0b",
-        ai: "#3b82f6",
+        // Government of India inspired
+        navy: {
+          50: "#f0f4fa",
+          100: "#dce6f4",
+          200: "#b8cde9",
+          400: "#3b67aa",
+          600: "#13407a",
+          700: "#0b3d91",  // primary
+          800: "#082c66",
+          900: "#051d44",
+        },
+        saffron: "#ff9933",
+        ind_green: "#138808",
+        sos: "#c0202b",
+        safe: "#138808",
+        caution: "#d97706",
+        canvas: "#f7f6f1",   // paper-like background
+        surface: "#ffffff",
+        ink: "#1a1a1a",
+        muted: "#5d5d5d",
+        rule: "#cfcfcf",
       },
       boxShadow: {
-        sos: "0 0 30px rgba(239,68,68,0.55)",
-      },
-      animation: {
-        "pulse-slow": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        gov: "0 1px 0 rgba(11,61,145,0.08), 0 6px 18px rgba(11,61,145,0.08)",
       },
     },
   },
