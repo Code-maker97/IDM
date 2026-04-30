@@ -1,60 +1,69 @@
-# Aegis · Safe-Route Navigation System — PRD
+# SurakshitPath सुरक्षित पथ — PRD
 
-## Problem Statement
-Intelligent Safe-Route Navigation System for Women & Vulnerable Groups.
-Design and develop an intelligent navigation system that recommends the safest routes in
-real time by leveraging location data, crowd-sourced inputs, and AI-driven risk analysis,
-along with emergency assistance features.
+## Submission Context
+- **Hackathon**: BGI Hackathon 2026
+- **Theme**: Smart Cities & Urban Innovation · Disaster Management
+- **Problem Statement ID**: IT3P2 — Intelligent Safe-Route Navigation System for Women & Vulnerable Groups
+- **Team**: Innovaters (Team ID 1467)
+
+## Product
+**SurakshitPath सुरक्षित पथ** ("Safe Path") — an AI-driven safe-route navigation platform
+designed in the visual language of Indian government citizen portals (UMANG / 112 India / Himmat Plus).
 
 ## Tech Stack
-- Frontend: React 18 + Tailwind CSS + Leaflet + react-leaflet + lucide-react
+- Frontend: React 18 + Tailwind + Leaflet (CartoDB Voyager light tiles) + lucide-react
 - Backend: FastAPI + MongoDB (motor) + httpx
-- Maps: OpenStreetMap tiles (CartoDB Dark Matter) + OSRM routing
-- Auth: Emergent-managed Google OAuth (session cookies)
+- Routing: OpenStreetMap + OSRM (foot profile)
+- Auth: Emergent-managed Google OAuth (localStorage Bearer token)
 - AI: GPT-5.2 (risk analysis) + Gemini 3 Flash (chatbot) via emergentintegrations
-- SMS: Twilio (currently in SIMULATION mode — add creds to enable real SMS)
+- SMS: Twilio (currently in SIMULATION mode — drop-in real SMS by setting Twilio creds)
 
-## User Personas
-- **Commuter Priya** — walks home after 8pm; wants well-lit routes + SOS
-- **Student Aisha** — new to city; needs trusted-contacts SMS + AI chat
-- **Admin Sarah** — moderates crowd-sourced incident reports
+## Visual Identity (Iteration 2)
+- Tricolor strip (saffron/white/green) at top & bottom
+- Masthead: "भारत सरकार · Government of India · Smart Cities Mission"
+- Logo: Ashoka chakra placeholder (CSS) + bilingual wordmark
+- Palette: Navy #0b3d91 (primary) · Saffron #ff9933 (accent) · India green #138808 (safe) · #c0202b (SOS)
+- Fonts: Noto Serif (heading), Noto Sans + Noto Sans Devanagari (body), Mukta (Hindi fallback)
+- Clear "PROTOTYPE" notice strip + Team & Problem ID branding throughout
 
-## Implemented Features (2026-04-17)
-- Emergent Google OAuth (session_token cookie + Bearer header)
-- Leaflet map (CartoDB Dark) with geolocation, user marker, incident markers
-- OSRM-based route fetching with multi-factor safety scoring (incidents within 200m buffer, lighting, crowd, time-of-day)
-- Route polylines color-coded by safety level (safe/caution/danger)
-- Crowd-sourced incident reporting (6 categories, 3 severities)
-- Trusted contacts management (add/delete)
-- SOS panic button with live location sharing (Twilio-ready, simulated now)
-- AI Safety Chatbot (Gemini 3 Flash, multi-turn, persistent session)
-- AI Route Risk Analysis (GPT-5.2, natural-language insight + tips)
-- Admin dashboard: stats, incident heatmap, moderation table (resolve/flag), top-categories chart
-- Day/night mode toggle affecting safety scoring
-- Landing page with onboarding and Google sign-in CTA
-- 12 demo incidents seeded in Bengaluru
+## Features Implemented
+1. **Citizen-facing Landing** — gov-style hero, "At a glance" stats card, six citizen-services tiles, four-step "How it works", research & data sources card
+2. **Map App** (`/app`)
+   - Gov navy header, day/night toggle, contacts/admin/logout
+   - OSRM safest route with multi-factor scoring (lighting, crowd, incidents, time-of-day)
+   - Color-coded route polylines (safe/caution/danger)
+   - Trusted contacts management
+   - SOS button (pulsing) → Twilio SMS (simulated)
+   - AI Chatbot (Gemini 3 Flash, multi-turn)
+   - AI Route Risk Analysis (GPT-5.2)
+   - Incident reporting (6 categories × 3 severities)
+   - Emergency footer with 112 / 1091 helpline shortcuts
+3. **Admin Console** (`/admin`)
+   - Stats cards (incidents, users, SOS triggers)
+   - Incident heatmap (size ∝ severity)
+   - Top categories bar chart
+   - Moderation table (resolve / flag) with filters
+4. **PWA** manifest + theme color
 
 ## Backend Endpoints
-- Auth: `/api/auth/session`, `/auth/me`, `/auth/logout`
+- Auth: `POST /api/auth/session`, `GET /api/auth/me`, `POST /api/auth/logout`
 - Incidents: `POST/GET /api/incidents`, `GET /api/incidents/heatmap`
 - Routes: `POST /api/routes/safest`
 - Contacts: `POST/GET/DELETE /api/contacts`
 - SOS: `POST /api/sos/trigger`, `GET /api/sos/history`
 - AI: `POST /api/ai/risk-analysis`, `POST /api/ai/chat`
 - Admin: `GET /api/admin/stats`, `GET/PATCH /api/admin/incidents`
-- Dev: `POST /api/dev/seed-incidents`
 
-## Testing (iteration_1.json)
-- Backend: 18/18 passed (100%)
-- Frontend: all flows passing (Landing, Map, Route Search, SOS, AI chat, Report, Contacts, Admin)
+## Testing
+- Iteration 1: 18/18 backend + all frontend flows ✅
+- Iteration 2 (gov re-skin): 18/18 backend + all frontend flows ✅
 
-## Backlog / Future
-- **P1**: Real Twilio SMS (user adds keys); live incident subscriptions via WebSocket; voice-activated SOS; wearable/IoT integration
-- **P2**: Geocoder for free-text origin/dest; full incident heatmap layer with density shading; multi-language; share-my-journey live link for contacts
-- **P2**: Push notifications when near reported hotspots
-- **P3**: Integration with public transport / ride-sharing; offline route caching
+## Backlog
+- **P1**: Add Twilio creds for live SMS · free-text Nominatim geocoder · websocket live incidents · push notifications
+- **P2**: Heatmap density layer · multi-language UI (Hindi, Tamil, Bengali, etc.) · "Share-a-Journey" live link · public transport integration
+- **P3**: Wearable / IoT panic button · 112 ERSS direct integration · machine-learning crime forecasting
 
 ## Smart Enhancements
-- **Growth**: Share-a-journey link — a trusted contact can watch live location without installing the app
-- **Trust loop**: Let users upvote/verify incidents to weight the safety scoring
-- **Revenue**: Free for individuals, paid tier for corporate safety (NGO / college campus dashboards)
+- **Trust loop**: incident upvoting/verification by community → improves scoring weights
+- **Growth**: "Share-a-Journey" link (every shared link onboards a new user)
+- **B2G revenue**: licence the admin dashboard to municipal corporations / city police

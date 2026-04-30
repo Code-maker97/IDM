@@ -1,19 +1,24 @@
-# Test Credentials for Safe-Route Navigation System
+# Test Credentials — SurakshitPath सुरक्षित पथ
 
-## Test Session (Pre-seeded in DB)
-- **Session Token**: `test_session_demo_001`
+## Pre-seeded Test Session (admin)
+- **localStorage key**: `spath_session_token`
+- **Session token value**: `test_session_demo_001`
 - **User ID**: `user_testdemo001`
 - **Email**: `demo@aegis.test`
+- **Name**: `Demo User`
 - **Is Admin**: `true`
+- **Expiry**: 30+ days from 2026-04-30
 
 ## Backend URL
-- **Production URL**: `https://fe3650be-85f8-4985-868c-b4576b76396a.preview.emergentagent.com`
+`https://safepath-nav-1.preview.emergentagent.com`
 
 ## Usage
-- **Backend API**: Use `Authorization: Bearer test_session_demo_001` header
-- **Browser/Frontend**: Set cookie `session_token=test_session_demo_001`
+- **Backend curl**: `Authorization: Bearer test_session_demo_001`
+- **Browser / Playwright**: navigate to app origin, then
+  `await page.evaluate("localStorage.setItem('spath_session_token', 'test_session_demo_001')")`
+  before navigating to `/app`.
 
 ## Notes
-- Twilio SMS is in SIMULATION mode (no real SMS sent)
-- LLM calls are live via Emergent LLM key
-- 12 incidents seeded in Bangalore area
+- Twilio SMS is in **SIMULATION** mode (no real SMS sent — returns `simulated=true`).
+- LLM (GPT-5.2 risk analysis, Gemini 3 Flash chat) is live via Emergent Universal LLM Key.
+- 12+ incidents seeded in Bengaluru via `/api/dev/seed-incidents`.
