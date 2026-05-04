@@ -142,9 +142,8 @@ function GeocodeField({ label, icon: Icon, iconColor, value, setValue, myPos, al
 
 export default function RouteSearchSheet({
   myPos, timeOfDay, onClose, routes, setRoutes, selectedRouteId, setSelectedRouteId,
+  origin, setOrigin, dest, setDest,
 }) {
-  const [origin, setOrigin] = useState(null);
-  const [dest, setDest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsight, setAiInsight] = useState(null);

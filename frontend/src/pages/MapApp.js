@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, ZoomControl, ScaleControl, LayersControl } from "react-leaflet";
 import L from "leaflet";
-import { Shield, Siren, MessageCircle, Users, AlertTriangle, LogOut, LayoutDashboard, Search, Crosshair, Sun, Moon } from "lucide-react";
+import { Shield, Siren, MessageCircle, Users, AlertTriangle, LogOut, LayoutDashboard, Search, Crosshair, Sun, Moon, Layers } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../App";
 import { api } from "../lib/api";
@@ -22,16 +22,54 @@ L.Icon.Default.mergeOptions({
 
 const DEFAULT_CENTER = [22.7196, 75.8577]; // Indore, Madhya Pradesh
 
+// Google-Maps-style SVG pin
+const svgPin = (color, letter = "") => `
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
+  <defs>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <path d="M16 0C7.16 0 0 7.16 0 16c0 10 16 26 16 26s16-16 16-26C32 7.16 24.84 0 16 0z"
+    fill="${color}" stroke="#ffffff" stroke-width="2" filter="url(#sh)"/>
+  <circle cx="16" cy="16" r="6.5" fill="#ffffff"/>
+  ${letter ? `<text x="16" y="20" text-anchor="middle" font-family="'Noto Sans',sans-serif" font-weight="700" font-size="11" fill="${color}">${letter}</text>` : ""}
+</svg>`;
+
+const pinIcon = (color, letter = "") =>
+  L.divIcon({
+    className: "custom-marker",
+    html: svgPin(color, letter),
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
+    popupAnchor: [0, -36],
+  });
+
+const originIcon = pinIcon("#0b3d91", "A");
+const destIcon = pinIcon("#138808", "B");
+
 const incidentIcon = (severity) => {
   const color = severity >= 3 ? "#c0202b" : severity === 2 ? "#d97706" : "#ca8a04";
   return L.divIcon({
     className: "custom-marker",
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 2px ${color}55"></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 2px ${color}55, 0 2px 4px rgba(0,0,0,0.25)"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 };
+
+// Animated "you are here" dot (Google-style blue)
 const userIcon = L.divIcon({
   className: "custom-marker",
-  html: `<div style="width:18px;height:18px;border-radius:50%;background:#0b3d91;border:3px solid #fff;box-shadow:0 0 0 3px rgba(11,61,145,0.35)"></div>`,
+  html: `
+    <div style="position:relative;width:22px;height:22px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:rgba(66,133,244,0.25);animation:me-pulse 2s ease-out infinite;"></div>
+      <div style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#4285F4;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>
+    </div>
+    <style>@keyframes me-pulse{0%{transform:scale(1);opacity:0.8}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}</style>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
 });
 
 function FitRoute({ coords }) {
@@ -55,6 +93,8 @@ export default function MapApp() {
   const [showChat, setShowChat] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
+  const [origin, setOrigin] = useState(null); // {lat,lng,label,short}
+  const [dest, setDest] = useState(null);
   const [timeOfDay, setTimeOfDay] = useState(() => {
     const h = new Date().getHours();
     return h >= 19 || h < 6 ? "night" : "day";
@@ -145,15 +185,59 @@ export default function MapApp() {
       {/* MAP */}
       <div className="relative flex-1">
         <MapContainer center={mapCenter} zoom={14} scrollWheelZoom className="h-full w-full" zoomControl={false}>
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png"
-            attribution='&copy; OpenStreetMap &copy; CARTO'
-          />
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="Streets">
+              <TileLayer
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Satellite">
+              <TileLayer
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution="Tiles &copy; Esri · Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Terrain">
+              <TileLayer
+                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                attribution='Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+                maxZoom={17}
+              />
+            </LayersControl.BaseLayer>
+          </LayersControl>
+          <ZoomControl position="bottomright" />
+          <ScaleControl position="bottomleft" imperial={false} />
+
           {selectedRoute && <FitRoute coords={selectedRoute.geometry} />}
 
           {myPos && (
             <Marker position={myPos} icon={userIcon}>
               <Popup>You are here</Popup>
+            </Marker>
+          )}
+
+          {/* Origin / Destination Google-style pins */}
+          {origin && (
+            <Marker position={[origin.lat, origin.lng]} icon={originIcon}>
+              <Popup>
+                <div className="text-xs">
+                  <div className="font-bold">Start (A)</div>
+                  <div className="opacity-70">{origin.label || origin.short}</div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          {dest && (
+            <Marker position={[dest.lat, dest.lng]} icon={destIcon}>
+              <Popup>
+                <div className="text-xs">
+                  <div className="font-bold">Destination (B)</div>
+                  <div className="opacity-70">{dest.label || dest.short}</div>
+                </div>
+              </Popup>
             </Marker>
           )}
 
@@ -174,17 +258,26 @@ export default function MapApp() {
             const isSelected = r.route_id === selectedRouteId;
             const color = r.level === "safe" ? "#138808" : r.level === "caution" ? "#d97706" : "#c0202b";
             return (
-              <Polyline
-                key={r.route_id}
-                positions={latlngs}
-                pathOptions={{
-                  color,
-                  weight: isSelected ? 7 : 4,
-                  opacity: isSelected ? 0.95 : 0.5,
-                  dashArray: isSelected ? null : "6 8",
-                }}
-                eventHandlers={{ click: () => setSelectedRouteId(r.route_id) }}
-              />
+              <React.Fragment key={r.route_id}>
+                {/* White casing underneath for Google-Maps look */}
+                {isSelected && (
+                  <Polyline
+                    positions={latlngs}
+                    pathOptions={{ color: "#ffffff", weight: 11, opacity: 1 }}
+                    interactive={false}
+                  />
+                )}
+                <Polyline
+                  positions={latlngs}
+                  pathOptions={{
+                    color,
+                    weight: isSelected ? 7 : 5,
+                    opacity: isSelected ? 0.95 : 0.55,
+                    dashArray: isSelected ? null : "8 10",
+                  }}
+                  eventHandlers={{ click: () => setSelectedRouteId(r.route_id) }}
+                />
+              </React.Fragment>
             );
           })}
         </MapContainer>
@@ -256,6 +349,10 @@ export default function MapApp() {
           setRoutes={setRoutes}
           selectedRouteId={selectedRouteId}
           setSelectedRouteId={setSelectedRouteId}
+          origin={origin}
+          setOrigin={setOrigin}
+          dest={dest}
+          setDest={setDest}
         />
       )}
 

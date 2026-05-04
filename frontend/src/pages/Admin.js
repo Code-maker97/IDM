@@ -152,7 +152,7 @@ export default function Admin() {
             </div>
             <div className="flex-1">
               <MapContainer center={center} zoom={12} scrollWheelZoom className="h-full w-full">
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png" attribution="&copy; OSM &copy; CARTO" />
+                <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" maxZoom={19} />
                 {incidents.map((i) => (
                   <CircleMarker
                     key={i.incident_id}
