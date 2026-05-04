@@ -62,6 +62,7 @@ designed in the visual language of Indian government citizen portals (UMANG / 11
 - Iteration 1: 18/18 backend + all frontend flows ✅
 - Iteration 2 (gov re-skin): 18/18 backend + all frontend flows ✅
 - Iteration 3 (geocoder + Indore + bulk import): 19/19 backend + all frontend flows ✅
+- Iteration 4 (Google-Maps-like visual + layer switcher + A/B pins): 19/19 backend + all frontend flows ✅
 
 ## Backlog
 - **P1**: Add Twilio creds for live SMS · free-text Nominatim geocoder · websocket live incidents · push notifications
