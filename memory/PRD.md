@@ -30,6 +30,7 @@ designed in the visual language of Indian government citizen portals (UMANG / 11
 1. **Citizen-facing Landing** — gov-style hero, "At a glance" stats card, six citizen-services tiles, four-step "How it works", research & data sources card
 2. **Map App** (`/app`)
    - Gov navy header, day/night toggle, contacts/admin/logout
+   - **Free-text address search** (Photon + Nominatim fallback) with debounced autocomplete + Indore landmark quick-picks
    - OSRM safest route with multi-factor scoring (lighting, crowd, incidents, time-of-day)
    - Color-coded route polylines (safe/caution/danger)
    - Trusted contacts management
@@ -42,8 +43,10 @@ designed in the visual language of Indian government citizen portals (UMANG / 11
    - Stats cards (incidents, users, SOS triggers)
    - Incident heatmap (size ∝ severity)
    - Top categories bar chart
+   - **Bulk JSON incident import** (paste-and-go, partnership / dataset ready)
    - Moderation table (resolve / flag) with filters
 4. **PWA** manifest + theme color
+5. **Target city: Indore** — 51 realistic incidents seeded across Rajwada, Sarafa, Vijay Nagar, Palasia, Bhawarkuan, MG Road, DAVV/university belt, Rau, Sarwate stand, Khajrana, LIG, Dewas Naka, Malharganj, Super Corridor, etc.
 
 ## Backend Endpoints
 - Auth: `POST /api/auth/session`, `GET /api/auth/me`, `POST /api/auth/logout`
@@ -52,11 +55,13 @@ designed in the visual language of Indian government citizen portals (UMANG / 11
 - Contacts: `POST/GET/DELETE /api/contacts`
 - SOS: `POST /api/sos/trigger`, `GET /api/sos/history`
 - AI: `POST /api/ai/risk-analysis`, `POST /api/ai/chat`
-- Admin: `GET /api/admin/stats`, `GET/PATCH /api/admin/incidents`
+- Geocoder: `GET /api/geocode/search`, `GET /api/geocode/reverse`
+- Admin: `GET /api/admin/stats`, `GET/PATCH /api/admin/incidents`, `POST /api/admin/incidents/bulk`
 
 ## Testing
 - Iteration 1: 18/18 backend + all frontend flows ✅
 - Iteration 2 (gov re-skin): 18/18 backend + all frontend flows ✅
+- Iteration 3 (geocoder + Indore + bulk import): 19/19 backend + all frontend flows ✅
 
 ## Backlog
 - **P1**: Add Twilio creds for live SMS · free-text Nominatim geocoder · websocket live incidents · push notifications
