@@ -20,7 +20,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const DEFAULT_CENTER = [12.9716, 77.5946]; // Bengaluru
+const DEFAULT_CENTER = [22.7196, 75.8577]; // Indore, Madhya Pradesh
 
 const incidentIcon = (severity) => {
   const color = severity >= 3 ? "#c0202b" : severity === 2 ? "#d97706" : "#ca8a04";

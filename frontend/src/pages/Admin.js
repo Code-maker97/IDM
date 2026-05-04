@@ -1,9 +1,86 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, Flag, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Flag, Loader2, MapPin, Upload, Database } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import { Masthead, GovFooter } from "../components/GovChrome";
+
+const SAMPLE_BULK_JSON = `[
+  {"category":"harassment","lat":22.7509,"lng":75.8959,"severity":2,"description":"Late-night catcalling near C21 Mall"},
+  {"category":"poor_lighting","lat":22.7279,"lng":75.8920,"severity":2,"description":"Broken street lamps on Palasia Square"},
+  {"category":"theft","lat":22.7205,"lng":75.8747,"severity":3,"description":"Bag snatching reported at Indore station"}
+]`;
+
+function BulkImportPanel({ onImported }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const submit = async () => {
+    setMsg(null); setBusy(true);
+    try {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("Must be a JSON array");
+      const res = await api.post("/admin/incidents/bulk", { incidents: parsed });
+      setMsg({ ok: true, text: `Imported ${res.data.inserted} incidents · total now ${res.data.total_now}` });
+      setText("");
+      onImported && onImported();
+    } catch (e) {
+      setMsg({ ok: false, text: e?.response?.data?.detail || e.message || "Import failed" });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="gov-card p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Database className="w-4 h-4 text-navy-700" />
+        <div className="font-heading text-sm font-bold">Bulk incident import</div>
+        <span className="ml-auto text-[10px] uppercase tracking-wider text-muted">Partnership data / datasets</span>
+      </div>
+      <div className="text-xs text-muted mb-3">
+        Paste a JSON array of incidents from a public crime dataset, police FIR export, or partner NGO feed.
+        Each record needs <code className="font-mono">category, lat, lng, severity</code> (1-3), and optional <code className="font-mono">description</code>.
+      </div>
+      <textarea
+        data-testid="bulk-import-textarea"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={SAMPLE_BULK_JSON}
+        rows={8}
+        className="gov-input font-mono text-[12px]"
+      />
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          data-testid="bulk-import-sample-btn"
+          type="button"
+          onClick={() => setText(SAMPLE_BULK_JSON)}
+          className="text-xs font-semibold uppercase tracking-wider px-3 py-2 border border-rule rounded hover:border-navy-700"
+        >
+          Load sample
+        </button>
+        <button
+          data-testid="bulk-import-submit-btn"
+          onClick={submit}
+          disabled={busy || !text.trim()}
+          className="ml-auto bg-navy-700 hover:bg-navy-800 text-white font-semibold px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-2"
+        >
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          Import
+        </button>
+      </div>
+      {msg && (
+        <div
+          data-testid="bulk-import-result"
+          className={`mt-3 text-xs px-3 py-2 rounded border ${
+            msg.ok ? "bg-ind_green/10 border-ind_green/40 text-ind_green" : "bg-sos/10 border-sos/40 text-sos"
+          }`}
+        >
+          {msg.text}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Admin() {
   const [incidents, setIncidents] = useState([]);
@@ -30,7 +107,7 @@ export default function Admin() {
   };
 
   const filtered = incidents.filter(i => filter === "all" ? true : i.status === filter);
-  const center = incidents.length ? [incidents[0].lat, incidents[0].lng] : [12.9716, 77.5946];
+  const center = incidents.length ? [incidents[0].lat, incidents[0].lng] : [22.7196, 75.8577];
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink">
@@ -126,6 +203,11 @@ export default function Admin() {
               Aggregated from citizen reports across the city. Data refreshes every 60 seconds.
             </div>
           </div>
+        </section>
+
+        {/* Bulk import */}
+        <section className="mb-6">
+          <BulkImportPanel onImported={load} />
         </section>
 
         {/* Moderation table */}

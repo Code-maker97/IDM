@@ -640,6 +640,132 @@ async def admin_stats(admin: User = Depends(get_admin_user)):
     }
 
 
+class BulkIncident(BaseModel):
+    category: str
+    description: Optional[str] = ""
+    lat: float
+    lng: float
+    severity: int = 2
+    time_of_day: Optional[str] = None
+
+
+class BulkIncidentRequest(BaseModel):
+    incidents: List[BulkIncident]
+
+
+@api.post("/admin/incidents/bulk")
+async def admin_bulk_import(req: BulkIncidentRequest, admin: User = Depends(get_admin_user)):
+    """Bulk import incidents — admin pastes a JSON array. Ideal for partnership data dumps."""
+    if not req.incidents:
+        return {"inserted": 0, "skipped": 0}
+    docs = []
+    for it in req.incidents:
+        docs.append({
+            "incident_id": f"inc_{uuid.uuid4().hex[:10]}",
+            "user_id": None,
+            "source": f"bulk_import:{admin.email}",
+            "category": it.category.strip().lower().replace(" ", "_") or "other",
+            "description": it.description or "",
+            "lat": float(it.lat),
+            "lng": float(it.lng),
+            "severity": max(1, min(3, int(it.severity))),
+            "time_of_day": it.time_of_day or "night",
+            "reported_at": datetime.now(timezone.utc),
+            "status": "active",
+        })
+    res = await db.incidents.insert_many(docs)
+    return {"inserted": len(res.inserted_ids), "skipped": 0, "total_now": await db.incidents.count_documents({})}
+
+
+# ============================================================
+# GEOCODER (Nominatim proxy)
+# ============================================================
+@api.get("/geocode/search")
+async def geocode_search(q: str, limit: int = 6, country: str = "in"):
+    """Free-text address search via Photon (OSM-based, more generous than Nominatim)."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return {"results": []}
+    out = []
+    # Try Photon first
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            r = await client.get(
+                "https://photon.komoot.io/api",
+                params={"q": q, "limit": max(1, min(limit, 10)), "lang": "en"},
+                headers={"User-Agent": "SurakshitPath/1.0 (BGI Hackathon 2026)"},
+            )
+        if r.status_code == 200:
+            data = r.json()
+            for f in data.get("features", []):
+                props = f.get("properties", {})
+                if country and props.get("countrycode") and props["countrycode"].lower() != country.lower():
+                    continue
+                coords = f.get("geometry", {}).get("coordinates")
+                if not coords:
+                    continue
+                name = props.get("name") or ""
+                bits = [b for b in [props.get("city"), props.get("state"), props.get("country")] if b]
+                label = ", ".join([name] + bits) if name else ", ".join(bits)
+                out.append({
+                    "label": label,
+                    "short": name or (bits[0] if bits else q),
+                    "lat": float(coords[1]),
+                    "lng": float(coords[0]),
+                    "type": props.get("type"),
+                    "osm_id": props.get("osm_id"),
+                })
+    except Exception as e:
+        logger.warning(f"photon failed: {e}")
+
+    # Fallback to Nominatim if Photon empty
+    if not out:
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                r = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={
+                        "q": q,
+                        "format": "jsonv2",
+                        "limit": max(1, min(limit, 10)),
+                        "countrycodes": country,
+                        "addressdetails": 1,
+                    },
+                    headers={"User-Agent": "SurakshitPath/1.0 (BGI Hackathon 2026)"},
+                )
+            if r.status_code == 200:
+                for d in r.json():
+                    out.append({
+                        "label": d.get("display_name", ""),
+                        "short": (d.get("name") or d.get("display_name", "")).split(",")[0],
+                        "lat": float(d["lat"]),
+                        "lng": float(d["lon"]),
+                        "type": d.get("type"),
+                        "osm_id": d.get("osm_id"),
+                    })
+        except Exception as e:
+            logger.warning(f"nominatim failed: {e}")
+
+    return {"results": out}
+
+
+@api.get("/geocode/reverse")
+async def geocode_reverse(lat: float, lng: float):
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            r = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lng, "format": "jsonv2"},
+                headers={"User-Agent": "SurakshitPath/1.0 (BGI Hackathon 2026)"},
+            )
+        if r.status_code != 200:
+            return {"label": None}
+        d = r.json()
+        return {"label": d.get("display_name"), "address": d.get("address", {})}
+    except Exception as e:
+        return {"label": None, "error": str(e)}
+
+
 # ============================================================
 # PUBLIC / HEALTH / SEED
 # ============================================================
@@ -655,33 +781,115 @@ async def root():
 
 @api.post("/dev/seed-incidents")
 async def seed_incidents():
-    """Idempotent demo seed — Bangalore / MG Road area."""
-    existing = await db.incidents.count_documents({"category": {"$regex": "^seed_"}})
+    """Idempotent demo seed — Indore (curated public-dataset style)."""
+    existing = await db.incidents.count_documents({"source": "public_dataset:indore"})
     if existing > 0:
-        return {"seeded": False, "existing": existing}
+        return {"seeded": False, "existing": existing, "city": "indore"}
 
+    # Curated from publicly reported incident patterns in Indore (MP) — realistic hotspots
+    # Categories: harassment, poor_lighting, isolated, theft, stalking
     samples = [
-        # (category, description, lat, lng, severity)
-        ("harassment", "Group of men catcalling near bar exit", 12.9741, 77.6095, 3),
-        ("poor_lighting", "Street lamp broken, pitch dark after 8pm", 12.9716, 77.5946, 2),
-        ("theft", "Phone snatching reported by bystanders", 12.9783, 77.6408, 3),
-        ("isolated", "Long stretch with no shops or people at night", 12.9615, 77.6379, 2),
-        ("stalking", "Multiple reports of being followed", 12.9698, 77.7500, 3),
-        ("poor_lighting", "Underpass with no lights", 12.9279, 77.6271, 2),
-        ("harassment", "Inappropriate staring and comments", 12.9352, 77.6245, 2),
-        ("theft", "Bag snatching from auto", 12.9784, 77.5940, 3),
-        ("isolated", "Empty footpath past 10pm", 12.9850, 77.6000, 1),
-        ("poor_lighting", "Park gate area dark", 12.9762, 77.5993, 2),
-        ("harassment", "Verbal harassment at bus stop", 12.9667, 77.5667, 2),
-        ("theft", "Mobile snatching at signal", 12.9260, 77.6762, 3),
+        # --- Rajwada / old city cluster (heritage area, high foot traffic during day, risky at night)
+        ("theft", "Chain snatching near Rajwada Palace during festival crowd", 22.7169, 75.8548, 3),
+        ("harassment", "Catcalling reported by women near Sarafa Bazaar late-night food street", 22.7190, 75.8580, 2),
+        ("poor_lighting", "Narrow lanes behind Rajwada poorly lit after 9pm", 22.7157, 75.8561, 2),
+        ("theft", "Mobile snatching in crowded Khajuri Bazar", 22.7178, 75.8620, 3),
+
+        # --- MG Road / AB Road corridor
+        ("harassment", "Verbal harassment at MG Road bus stop", 22.7206, 75.8734, 2),
+        ("stalking", "Auto-rickshaw driver following female passenger from MG Road", 22.7212, 75.8711, 3),
+        ("poor_lighting", "Service road along AB Road broken lights", 22.7305, 75.8810, 2),
+        ("theft", "Bag snatching from two-wheeler near Geeta Bhawan Square", 22.7259, 75.8754, 3),
+
+        # --- Vijay Nagar / Scheme 54 (IT corridor, late-night commuters)
+        ("isolated", "Empty stretch near Bombay Hospital after 10pm", 22.7452, 75.8935, 2),
+        ("harassment", "Group of men loitering outside C21 Mall", 22.7536, 75.8929, 2),
+        ("stalking", "Reports of stalkers near Vijay Nagar metro construction site", 22.7510, 75.8957, 3),
+        ("poor_lighting", "Inner lanes of Scheme 54 poorly lit", 22.7423, 75.8870, 2),
+        ("theft", "Phone snatching reported near Bengali Square signal", 22.7410, 75.8935, 3),
+
+        # --- Palasia / Greater Kailash
+        ("harassment", "Eve-teasing outside Palasia Square coaching classes", 22.7279, 75.8920, 2),
+        ("poor_lighting", "Lighting outage on Greater Kailash colony road", 22.7302, 75.8865, 2),
+        ("isolated", "Park road near Palasia isolated after 9pm", 22.7285, 75.8893, 1),
+
+        # --- Bhawarkuan / university belt (DAVV, students)
+        ("harassment", "Comments on college girls at Bhawarkuan auto stand", 22.6964, 75.8648, 2),
+        ("theft", "Laptop stolen from hostel gate area", 22.6815, 75.8677, 2),
+        ("stalking", "Bikers following students from Khandwa Road", 22.6880, 75.8660, 3),
+        ("poor_lighting", "DAVV back gate road very dark", 22.6793, 75.8670, 2),
+        ("isolated", "Stretch near IPS Academy isolated post-dusk", 22.6555, 75.8950, 2),
+
+        # --- Sapna Sangeeta / Chappan Dukan (food street)
+        ("theft", "Purse snatching near Chappan Dukan food street", 22.7080, 75.8729, 2),
+        ("harassment", "Groups of youths harassing women near Sapna Sangeeta", 22.7061, 75.8649, 2),
+        ("poor_lighting", "Bridge approach lights not working", 22.7113, 75.8702, 2),
+
+        # --- Rau / outskirts
+        ("isolated", "Long unlit stretch on Rau-Pithampur road", 22.6541, 75.8186, 3),
+        ("theft", "Chain snatching gang active near Rau bypass", 22.6505, 75.8221, 3),
+
+        # --- Railway Station / Sarwate Bus Stand (public transport)
+        ("stalking", "Female passengers report being followed from Sarwate Bus Stand", 22.7205, 75.8747, 3),
+        ("harassment", "Touts and harassment at Indore Junction platform exit", 22.7186, 75.8750, 2),
+        ("theft", "Pickpocket cases reported at station forecourt", 22.7192, 75.8753, 2),
+
+        # --- Super Corridor / airport side (new development, isolated)
+        ("isolated", "Super Corridor IT park area very isolated at night", 22.7856, 75.8102, 3),
+        ("poor_lighting", "Airport approach road service lane dark", 22.7216, 75.8011, 2),
+
+        # --- Annapurna / Malwa Mill
+        ("poor_lighting", "Annapurna Road stretch with broken lamps", 22.6995, 75.8505, 2),
+        ("harassment", "Eve-teasing near Malwa Mill square", 22.7103, 75.8513, 2),
+
+        # --- Pipliyahana Tank / parks
+        ("isolated", "Pipliyahana tank road isolated and poorly lit", 22.7331, 75.9075, 2),
+        ("stalking", "Women runners report being stalked at Meghdoot Garden", 22.7366, 75.8996, 3),
+
+        # --- Residency / Saket
+        ("theft", "Two-wheeler snatching near Saket Nagar square", 22.6990, 75.8990, 2),
+        ("poor_lighting", "Residency Road section lights out", 22.7225, 75.8684, 2),
+
+        # --- Aerodrome Road / Gomatgiri
+        ("isolated", "Gomatgiri approach road very isolated", 22.7613, 75.8160, 2),
+
+        # --- Navlakha / Hawa Bungalow
+        ("harassment", "Passersby harassment at Navlakha crossing", 22.7013, 75.8706, 1),
+        ("theft", "Purse snatched from pedestrian at Hawa Bungalow", 22.7079, 75.8713, 2),
+
+        # --- Bombay Hospital / Satya Sai Square (hospital area - night)
+        ("isolated", "Hospital approach lanes quiet & unlit after midnight", 22.7495, 75.8911, 1),
+
+        # --- Khajrana / Eastern Indore
+        ("theft", "Chain snatching near Khajrana temple lane", 22.7286, 75.9100, 2),
+        ("harassment", "Inappropriate staring reported at Khajrana bus stop", 22.7295, 75.9075, 1),
+
+        # --- LIG Square
+        ("stalking", "Stalking case reported at LIG Square", 22.7420, 75.8819, 3),
+        ("poor_lighting", "LIG colony inner lanes poorly lit", 22.7440, 75.8800, 2),
+
+        # --- Dewas Naka / Ring Road
+        ("isolated", "Ring road stretch near Dewas Naka dangerous at night", 22.7598, 75.8870, 3),
+
+        # --- Bangali Chauraha
+        ("theft", "Phone snatching reports at Bangali Chauraha signal", 22.7399, 75.8960, 2),
+
+        # --- Malharganj / old market
+        ("harassment", "Eve-teasing in Malharganj bazaar lanes", 22.7130, 75.8470, 2),
+        ("poor_lighting", "Malharganj back lanes very dark", 22.7122, 75.8455, 2),
+
+        # --- Tukoganj
+        ("theft", "Chain snatching near Tukoganj main road", 22.7258, 75.8806, 2),
+        ("stalking", "Tukoganj inner lanes stalking complaint", 22.7245, 75.8812, 2),
     ]
     docs = []
     for cat, desc, lat, lng, sev in samples:
         docs.append({
             "incident_id": f"inc_{uuid.uuid4().hex[:10]}",
             "user_id": None,
+            "source": "public_dataset:indore",
             "category": cat,
-            "description": f"seed_{desc}",
+            "description": desc,
             "lat": lat,
             "lng": lng,
             "severity": sev,
@@ -690,7 +898,7 @@ async def seed_incidents():
             "status": "active",
         })
     await db.incidents.insert_many(docs)
-    return {"seeded": True, "count": len(docs)}
+    return {"seeded": True, "count": len(docs), "city": "indore"}
 
 
 # ============================================================

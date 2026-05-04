@@ -1,14 +1,144 @@
-import React, { useState } from "react";
-import { X, Navigation2, MapPin, Flag, Sparkles, Loader2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { X, Navigation2, MapPin, Flag, Sparkles, Loader2, Search, Crosshair } from "lucide-react";
 import { api } from "../lib/api";
 
-const PRESETS = [
-  { label: "MG Road", lat: 12.9758, lng: 77.6063 },
-  { label: "Indiranagar", lat: 12.9784, lng: 77.6408 },
-  { label: "Koramangala", lat: 12.9352, lng: 77.6245 },
-  { label: "Whitefield", lat: 12.9698, lng: 77.7500 },
-  { label: "Jayanagar", lat: 12.9260, lng: 77.5800 },
+// Indore landmark quick-picks
+const QUICK_PICKS = [
+  { label: "Rajwada", lat: 22.7184, lng: 75.8548 },
+  { label: "Sarafa Bazaar", lat: 22.7190, lng: 75.8580 },
+  { label: "Vijay Nagar", lat: 22.7509, lng: 75.8959 },
+  { label: "Palasia", lat: 22.7279, lng: 75.8920 },
+  { label: "Bhawarkuan", lat: 22.6964, lng: 75.8648 },
+  { label: "Indore Station", lat: 22.7205, lng: 75.8747 },
+  { label: "Airport", lat: 22.7216, lng: 75.8011 },
 ];
+
+function useDebounced(value, delay = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+function GeocodeField({ label, icon: Icon, iconColor, value, setValue, myPos, allowMyLocation, testIdPrefix }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  const debounced = useDebounced(query, 380);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!debounced || debounced.trim().length < 2) { setResults([]); return; }
+      setLoading(true);
+      try {
+        const res = await api.get("/geocode/search", { params: { q: debounced, limit: 6 } });
+        if (!cancelled) setResults(res.data.results || []);
+      } catch { if (!cancelled) setResults([]); }
+      finally { if (!cancelled) setLoading(false); }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [debounced]);
+
+  // Click outside closes
+  useEffect(() => {
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const pick = (p) => {
+    setValue(p);
+    setQuery(p.label || p.short || "");
+    setOpen(false);
+  };
+
+  const useMy = () => {
+    if (!myPos) return;
+    const p = { label: "My current location", short: "My location", lat: myPos[0], lng: myPos[1], isMine: true };
+    pick(p);
+  };
+
+  return (
+    <div className="border border-rule rounded p-3 bg-canvas" ref={boxRef}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4" style={{ color: iconColor }} />
+        <div className="gov-label">{label}</div>
+        {allowMyLocation && myPos && (
+          <button
+            data-testid={`${testIdPrefix}-use-my-location`}
+            onClick={useMy}
+            className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 border border-navy-700 text-navy-700 rounded hover:bg-navy-50"
+          >
+            <Crosshair className="w-3 h-3" /> Use my location
+          </button>
+        )}
+      </div>
+      <div className="relative">
+        <div className="flex items-center gap-2 border border-rule bg-white rounded">
+          <Search className="w-4 h-4 text-muted ml-2.5" />
+          <input
+            data-testid={`${testIdPrefix}-input`}
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); if (value) setValue(null); }}
+            onFocus={() => setOpen(true)}
+            placeholder="Search address, landmark, or area…"
+            className="flex-1 py-2 pr-2 bg-transparent text-sm focus:outline-none"
+          />
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-muted mr-2" />}
+        </div>
+
+        {open && (results.length > 0 || query.length >= 2) && (
+          <div className="absolute inset-x-0 top-full mt-1 bg-white border border-rule rounded shadow-gov z-40 max-h-60 overflow-y-auto">
+            {results.length === 0 && !loading && (
+              <div className="px-3 py-3 text-xs text-muted">No matches. Try a different spelling.</div>
+            )}
+            {results.map((r, i) => (
+              <button
+                key={i}
+                data-testid={`${testIdPrefix}-result-${i}`}
+                onClick={() => pick(r)}
+                className="w-full text-left px-3 py-2 hover:bg-navy-50 border-b border-rule last:border-0"
+              >
+                <div className="text-sm font-semibold text-ink truncate">{r.short}</div>
+                <div className="text-[11px] text-muted truncate">{r.label}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Quick picks */}
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {QUICK_PICKS.map((p) => (
+          <button
+            key={testIdPrefix + p.label}
+            data-testid={`${testIdPrefix}-quick-${p.label.toLowerCase().replace(/\s+/g, "-")}`}
+            onClick={() => pick({ ...p, short: p.label, label: `${p.label}, Indore` })}
+            className={`text-[11px] px-2.5 py-1 rounded border transition-colors ${
+              value?.lat === p.lat && value?.lng === p.lng
+                ? "bg-navy-700 text-white border-navy-700"
+                : "bg-white border-rule hover:border-navy-700 text-ink"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {value && (
+        <div className="text-[11px] text-muted mt-2 font-mono truncate">
+          ✓ {value.short || value.label} · {value.lat.toFixed(4)}, {value.lng.toFixed(4)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RouteSearchSheet({
   myPos, timeOfDay, onClose, routes, setRoutes, selectedRouteId, setSelectedRouteId,
@@ -18,10 +148,6 @@ export default function RouteSearchSheet({
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsight, setAiInsight] = useState(null);
-
-  const useMyLocation = () => {
-    if (myPos) setOrigin({ lat: myPos[0], lng: myPos[1], label: "My location" });
-  };
 
   const findRoutes = async () => {
     if (!origin || !dest) return;
@@ -35,7 +161,7 @@ export default function RouteSearchSheet({
       });
       setRoutes(res.data.routes);
       setSelectedRouteId(res.data.routes[0]?.route_id);
-    } catch (e) {
+    } catch {
       alert("Could not compute routes. Please try again.");
     } finally { setLoading(false); }
   };
@@ -61,31 +187,11 @@ export default function RouteSearchSheet({
     } finally { setAiLoading(false); }
   };
 
-  const PresetRow = ({ value, setValue, testIdPrefix }) => (
-    <div className="flex flex-wrap gap-1.5">
-      {PRESETS.map((p) => (
-        <button
-          key={testIdPrefix + p.label}
-          data-testid={`${testIdPrefix}-${p.label.toLowerCase()}`}
-          onClick={() => setValue({ ...p })}
-          className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-            value?.label === p.label && value?.lat === p.lat
-              ? "bg-navy-700 text-white border-navy-700"
-              : "bg-white border-rule hover:border-navy-700 text-ink"
-          }`}
-        >
-          {p.label}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <div
-      className="absolute bottom-0 inset-x-0 z-30 bg-white border-t border-rule shadow-gov rounded-t-lg slide-up max-h-[72vh] overflow-y-auto"
+      className="absolute bottom-0 inset-x-0 z-30 bg-white border-t border-rule shadow-gov rounded-t-lg slide-up max-h-[75vh] overflow-y-auto"
       data-testid="route-search-sheet"
     >
-      {/* Saffron tab top */}
       <div className="h-1 bg-saffron" />
       <div className="px-4 sm:px-5 py-4">
         <div className="flex items-center justify-between mb-3">
@@ -98,39 +204,26 @@ export default function RouteSearchSheet({
           </button>
         </div>
 
-        {/* Origin */}
-        <div className="border border-rule rounded p-3 mb-3 bg-canvas">
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-navy-700" />
-            <div className="gov-label">From</div>
-            <button
-              data-testid="use-my-location-btn"
-              onClick={useMyLocation}
-              className="ml-auto text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 border border-navy-700 text-navy-700 rounded hover:bg-navy-50"
-            >
-              Use my location
-            </button>
-          </div>
-          <PresetRow value={origin} setValue={setOrigin} testIdPrefix="origin-preset" />
-          {origin && (
-            <div className="text-xs text-muted mt-2 font-mono">
-              {origin.label} · {origin.lat.toFixed(4)}, {origin.lng.toFixed(4)}
-            </div>
-          )}
-        </div>
-
-        {/* Destination */}
-        <div className="border border-rule rounded p-3 mb-4 bg-canvas">
-          <div className="flex items-center gap-2 mb-2">
-            <Flag className="w-4 h-4 text-ind_green" />
-            <div className="gov-label">To</div>
-          </div>
-          <PresetRow value={dest} setValue={setDest} testIdPrefix="dest-preset" />
-          {dest && (
-            <div className="text-xs text-muted mt-2 font-mono">
-              {dest.label} · {dest.lat.toFixed(4)}, {dest.lng.toFixed(4)}
-            </div>
-          )}
+        <div className="space-y-3 mb-4">
+          <GeocodeField
+            label="From"
+            icon={MapPin}
+            iconColor="#0b3d91"
+            value={origin}
+            setValue={setOrigin}
+            myPos={myPos}
+            allowMyLocation
+            testIdPrefix="origin"
+          />
+          <GeocodeField
+            label="To"
+            icon={Flag}
+            iconColor="#138808"
+            value={dest}
+            setValue={setDest}
+            myPos={myPos}
+            testIdPrefix="dest"
+          />
         </div>
 
         <button
@@ -143,7 +236,6 @@ export default function RouteSearchSheet({
           {loading ? "Computing safest routes…" : "Find safest route"}
         </button>
 
-        {/* Results */}
         {routes.length > 0 && (
           <div className="mt-5 space-y-2" data-testid="route-results">
             <div className="gov-label mb-1">
