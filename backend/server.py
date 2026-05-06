@@ -320,12 +320,11 @@ def compute_safety_score(
         base -= 6
     safety_score = max(5, min(100, base))
 
+    level = "danger"  # default; overridden below
     if safety_score >= 75:
         level = "safe"
     elif safety_score >= 50:
         level = "caution"
-    else:
-        level = "danger"
 
     return {
         "safety_score": safety_score,

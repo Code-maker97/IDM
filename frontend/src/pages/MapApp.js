@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, ZoomControl, ScaleControl, LayersControl } from "react-leaflet";
 import L from "leaflet";
 import { Shield, Siren, MessageCircle, Users, AlertTriangle, LogOut, LayoutDashboard, Search, Crosshair, Sun, Moon, Layers } from "lucide-react";
@@ -109,13 +109,15 @@ export default function MapApp() {
     );
   }, []);
 
-  const loadIncidents = async () => {
+  const loadIncidents = useCallback(async () => {
     try {
       const res = await api.get("/incidents", { params: { limit: 200 } });
       setIncidents(res.data.incidents || []);
-    } catch (e) { console.error(e); }
-  };
-  useEffect(() => { loadIncidents(); }, []);
+    } catch (error) {
+      console.error("Failed to load incidents:", error);
+    }
+  }, []);
+  useEffect(() => { loadIncidents(); }, [loadIncidents]);
 
   const selectedRoute = useMemo(
     () => routes.find((r) => r.route_id === selectedRouteId),

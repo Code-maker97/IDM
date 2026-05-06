@@ -103,7 +103,9 @@ export default function Admin() {
   useEffect(() => { load(); }, []);
 
   const update = async (id, patch) => {
-    try { await api.patch(`/admin/incidents/${id}`, patch); await load(); } catch {}
+    try { await api.patch(`/admin/incidents/${id}`, patch); await load(); } catch (error) {
+      console.error("Failed to update incident:", error);
+    }
   };
 
   const filtered = incidents.filter(i => filter === "all" ? true : i.status === filter);
@@ -132,8 +134,8 @@ export default function Admin() {
             { label: "Resolved", value: stats?.resolved_incidents ?? "—", color: "text-ind_green" },
             { label: "Registered users", value: stats?.total_users ?? "—" },
             { label: "SOS triggers", value: stats?.total_sos ?? "—", color: "text-sos" },
-          ].map((c, i) => (
-            <div key={i} className="gov-card p-4">
+          ].map((c) => (
+            <div key={c.label} className="gov-card p-4">
               <div className="gov-label">{c.label}</div>
               <div className={`font-heading text-3xl font-bold mt-1 ${c.color || "text-navy-700"}`}>{c.value}</div>
             </div>

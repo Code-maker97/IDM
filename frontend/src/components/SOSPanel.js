@@ -13,7 +13,9 @@ export default function SOSPanel({ myPos, onClose }) {
       try {
         const res = await api.get("/contacts");
         setContacts(res.data.contacts || []);
-      } catch {}
+      } catch (error) {
+        console.error("Failed to load contacts:", error);
+      }
       setLoading(false);
     })();
   }, []);

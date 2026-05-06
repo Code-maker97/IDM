@@ -98,10 +98,10 @@ function GeocodeField({ label, icon: Icon, iconColor, value, setValue, myPos, al
             {results.length === 0 && !loading && (
               <div className="px-3 py-3 text-xs text-muted">No matches. Try a different spelling.</div>
             )}
-            {results.map((r, i) => (
+            {results.map((r) => (
               <button
-                key={i}
-                data-testid={`${testIdPrefix}-result-${i}`}
+                key={r.osm_id != null ? `osm-${r.osm_id}` : r.label}
+                data-testid={`${testIdPrefix}-result-${r.osm_id ?? r.label}`}
                 onClick={() => pick(r)}
                 className="w-full text-left px-3 py-2 hover:bg-navy-50 border-b border-rule last:border-0"
               >

@@ -28,7 +28,8 @@ export default function AIChatbot({ onClose }) {
     try {
       const res = await api.post("/ai/chat", { session_id: sessionId, message: text });
       setMessages((m) => [...m, { role: "ai", text: res.data.reply }]);
-    } catch {
+    } catch (error) {
+      console.error("Chat request failed:", error);
       setMessages((m) => [...m, { role: "ai", text: "I couldn't reach the AI right now. Try again in a moment." }]);
     } finally { setLoading(false); }
   };
@@ -54,7 +55,7 @@ export default function AIChatbot({ onClose }) {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white" data-testid="chat-messages">
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={`${m.role}-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[80%] px-3.5 py-2.5 rounded-lg text-sm leading-relaxed whitespace-pre-wrap ${
                   m.role === "user"
@@ -78,10 +79,10 @@ export default function AIChatbot({ onClose }) {
 
         {messages.length <= 1 && (
           <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-            {STARTER.map((s, i) => (
+            {STARTER.map((s) => (
               <button
-                key={i}
-                data-testid={`chat-starter-${i}`}
+                key={s}
+                data-testid={`chat-starter-${s.slice(0, 20)}`}
                 onClick={() => send(s)}
                 className="text-[11px] px-3 py-1.5 rounded border border-rule hover:border-navy-700 text-muted bg-white"
               >

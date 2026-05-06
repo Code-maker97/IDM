@@ -8,7 +8,7 @@ import os
 import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-TEST_SESSION_TOKEN = "test_session_demo_001"
+TEST_SESSION_TOKEN = os.getenv("TEST_SESSION_TOKEN", "test_session_demo_001")
 
 class TestHealthEndpoint:
     """Health check endpoint tests"""
@@ -47,7 +47,7 @@ class TestAuthEndpoints:
         data = response.json()
         assert data["user_id"] == "user_testdemo001"
         assert data["email"] == "demo@aegis.test"
-        assert data["is_admin"] == True
+        assert data["is_admin"] is True
         print(f"Auth /me passed: user={data['email']}, is_admin={data['is_admin']}")
     
     def test_auth_me_without_token_returns_401(self):
@@ -227,7 +227,7 @@ class TestSOSEndpoints:
         assert "alert_id" in data
         assert "contacts_notified" in data
         assert "simulated" in data
-        assert data["simulated"] == True, "Expected simulated=true (Twilio not configured)"
+        assert data["simulated"] is True, "Expected simulated=true (Twilio not configured)"
         assert "maps_url" in data
         assert "maps.google.com" in data["maps_url"]
         print(f"SOS triggered: alert_id={data['alert_id']}, contacts_notified={data['contacts_notified']}, simulated={data['simulated']}")

@@ -14,7 +14,9 @@ export default function TrustedContactsModal({ onClose }) {
     try {
       const res = await api.get("/contacts");
       setContacts(res.data.contacts || []);
-    } catch {}
+    } catch (error) {
+      console.error("Failed to load contacts:", error);
+    }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -32,7 +34,9 @@ export default function TrustedContactsModal({ onClose }) {
   };
 
   const remove = async (id) => {
-    try { await api.delete(`/contacts/${id}`); await load(); } catch {}
+    try { await api.delete(`/contacts/${id}`); await load(); } catch (error) {
+      console.error("Failed to delete contact:", error);
+    }
   };
 
   return (

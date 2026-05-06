@@ -8,7 +8,7 @@ import os
 import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-TEST_SESSION_TOKEN = "test_session_demo_001"
+TEST_SESSION_TOKEN = os.getenv("TEST_SESSION_TOKEN", "test_session_demo_001")
 
 # ============================================================
 # NEW ITERATION 3 TESTS - GEOCODER
@@ -155,7 +155,7 @@ class TestIndoreSeed:
         assert response2.status_code == 200
         data2 = response2.json()
         assert data2["city"] == "indore"
-        assert data2.get("seeded") == False, "Second seed call should return seeded=False"
+        assert data2.get("seeded") is False, "Second seed call should return seeded=False"
         print(f"Seed call 2 (idempotent): seeded={data2.get('seeded')}, existing={data2.get('existing')}")
     
     def test_incidents_clustered_around_indore(self):
@@ -204,7 +204,7 @@ class TestAuthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["user_id"] == "user_testdemo001"
-        assert data["is_admin"] == True
+        assert data["is_admin"] is True
         print(f"Auth /me: user={data['email']}, is_admin={data['is_admin']}")
 
 
@@ -276,7 +276,7 @@ class TestSOSEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["simulated"] == True
+        assert data["simulated"] is True
         assert "alert_id" in data
         assert "maps_url" in data
         print(f"SOS: alert_id={data['alert_id']}, simulated={data['simulated']}")

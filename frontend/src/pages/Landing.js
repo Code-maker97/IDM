@@ -96,8 +96,8 @@ export default function Landing() {
               <span className="text-[10px] font-mono text-muted">Source: NCRB & MoSJE briefings</span>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {STATS.map((s, i) => (
-                <div key={i} className="border border-rule p-4 rounded">
+              {STATS.map((s) => (
+                <div key={s.num} className="border border-rule p-4 rounded">
                   <div className="font-heading text-3xl text-navy-700 font-bold leading-none">{s.num}</div>
                   <div className="text-[12px] text-muted mt-1.5 leading-snug">{s.label}</div>
                 </div>
@@ -121,8 +121,8 @@ export default function Landing() {
           <span className="font-hindi text-muted text-sm hidden sm:block">नागरिक सेवाएँ</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SCHEMES.map(({ icon: Icon, label, desc }, i) => (
-            <div key={i} className="gov-card scheme-tile p-5">
+          {SCHEMES.map(({ icon: Icon, label, desc }) => (
+            <div key={label} className="gov-card scheme-tile p-5">
               <div className="w-10 h-10 rounded bg-navy-50 border border-navy-100 flex items-center justify-center mb-3">
                 <Icon className="w-5 h-5 text-navy-700" strokeWidth={2} />
               </div>
@@ -146,8 +146,8 @@ export default function Landing() {
               { n: "02", t: "Plan", d: "Enter destination — AI computes safest path using live data." },
               { n: "03", t: "Travel", d: "Follow route. Report any hazard with one tap on the map." },
               { n: "04", t: "Alert", d: "If unsafe — SOS pings every trusted contact with live GPS." },
-            ].map((s, i) => (
-              <div key={i} className="border-l-4 border-navy-700 pl-4 py-1">
+            ].map((s) => (
+              <div key={s.n} className="border-l-4 border-navy-700 pl-4 py-1">
                 <div className="font-mono text-saffron text-sm font-bold">{s.n}</div>
                 <div className="font-semibold mt-1">{s.t}</div>
                 <div className="text-[12.5px] text-muted leading-relaxed mt-1">{s.d}</div>
