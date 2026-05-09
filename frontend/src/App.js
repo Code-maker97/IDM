@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import Landing from "./pages/Landing";
 import MapApp from "./pages/MapApp";
 import Admin from "./pages/Admin";
-import { api, setToken } from "./lib/api";
+import { api, setToken, getToken } from "./lib/api";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -24,8 +24,7 @@ function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
+    // Skip /me check if handling OAuth callback
     if (window.location.hash && window.location.hash.includes("session_id=")) {
       setLoading(false);
       return;
@@ -33,20 +32,30 @@ function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
+  // Dev login — no OAuth needed
+  const devLogin = async () => {
+    try {
+      const res = await api.post("/auth/dev-login", { name: "Demo User", email: "demo@surakshitpath.in" });
+      if (res.data?.session_token) setToken(res.data.session_token);
+      setUser(res.data.user);
+    } catch (e) {
+      console.error("Dev login failed", e);
+    }
+  };
+
   const logout = async () => {
-    try { await api.post("/auth/logout"); } catch (error) { console.error("Logout request failed:", error); }
+    try { await api.post("/auth/logout"); } catch { }
     setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, checkAuth, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, checkAuth, logout, devLogin }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 function AuthCallback() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
@@ -55,15 +64,10 @@ function AuthCallback() {
   useEffect(() => {
     if (hasProcessed.current) return;
     hasProcessed.current = true;
-
     const fragment = window.location.hash.slice(1);
     const params = new URLSearchParams(fragment);
     const sessionId = params.get("session_id");
-
-    if (!sessionId) {
-      navigate("/", { replace: true });
-      return;
-    }
+    if (!sessionId) { navigate("/", { replace: true }); return; }
     (async () => {
       try {
         const res = await api.post("/auth/session", { session_id: sessionId });
@@ -101,7 +105,6 @@ function ProtectedRoute({ children, adminOnly = false }) {
 
 function AppRouter() {
   const location = useLocation();
-  // Check URL fragment synchronously during render to handle OAuth callback
   if (location.hash && location.hash.includes("session_id=")) {
     return <AuthCallback />;
   }

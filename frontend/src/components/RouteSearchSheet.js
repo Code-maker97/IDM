@@ -120,11 +120,10 @@ function GeocodeField({ label, icon: Icon, iconColor, value, setValue, myPos, al
             key={testIdPrefix + p.label}
             data-testid={`${testIdPrefix}-quick-${p.label.toLowerCase().replace(/\s+/g, "-")}`}
             onClick={() => pick({ ...p, short: p.label, label: `${p.label}, Indore` })}
-            className={`text-[11px] px-2.5 py-1 rounded border transition-colors ${
-              value?.lat === p.lat && value?.lng === p.lng
+            className={`text-[11px] px-2.5 py-1 rounded border transition-colors ${value?.lat === p.lat && value?.lng === p.lng
                 ? "bg-navy-700 text-white border-navy-700"
                 : "bg-white border-rule hover:border-navy-700 text-ink"
-            }`}
+              }`}
           >
             {p.label}
           </button>
@@ -188,7 +187,8 @@ export default function RouteSearchSheet({
 
   return (
     <div
-      className="absolute bottom-0 inset-x-0 z-30 bg-white border-t border-rule shadow-gov rounded-t-lg slide-up max-h-[75vh] overflow-y-auto"
+      className="absolute bottom-0 inset-x-0 bg-white border-t border-rule shadow-gov rounded-t-lg slide-up max-h-[75vh] overflow-y-auto"
+      style={{ zIndex: 500 }}
       data-testid="route-search-sheet"
     >
       <div className="h-1 bg-saffron" />
@@ -244,16 +244,15 @@ export default function RouteSearchSheet({
               const active = r.route_id === selectedRouteId;
               const tone =
                 r.level === "safe" ? "border-l-ind_green text-ind_green"
-                : r.level === "caution" ? "border-l-caution text-caution"
-                : "border-l-sos text-sos";
+                  : r.level === "caution" ? "border-l-caution text-caution"
+                    : "border-l-sos text-sos";
               return (
                 <button
                   key={r.route_id}
                   data-testid={`route-card-${r.route_id}`}
                   onClick={() => { setSelectedRouteId(r.route_id); setAiInsight(null); }}
-                  className={`w-full text-left border border-rule border-l-4 ${tone.split(" ")[0]} rounded p-3 transition-all ${
-                    active ? "bg-navy-50 border-navy-700" : "bg-white hover:border-navy-700"
-                  }`}
+                  className={`w-full text-left border border-rule border-l-4 ${tone.split(" ")[0]} rounded p-3 transition-all ${active ? "bg-navy-50 border-navy-700" : "bg-white hover:border-navy-700"
+                    }`}
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <div className={`font-heading text-3xl font-bold ${tone.split(" ")[1]}`}>{r.safety_score}</div>

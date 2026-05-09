@@ -88,7 +88,7 @@ export default function MapApp() {
   const [incidents, setIncidents] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState(null);
-  const [showSearch, setShowSearch] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
   const [showSOS, setShowSOS] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -286,7 +286,7 @@ export default function MapApp() {
 
         {/* Quick search bar (when sheet closed) */}
         {!showSearch && (
-          <div className="absolute top-3 inset-x-3 z-20">
+          <div className="absolute top-3 inset-x-3" style={{ zIndex: 500 }}>
             <button
               data-testid="open-search-btn"
               onClick={() => setShowSearch(true)}
@@ -303,7 +303,8 @@ export default function MapApp() {
           <button
             data-testid="recenter-btn"
             onClick={() => setMyPos([...myPos])}
-            className="absolute right-3 bottom-44 z-20 bg-white border border-rule rounded-full p-3 hover:border-navy-700 shadow-gov"
+            className="absolute right-3 bottom-44 bg-white border border-rule rounded-full p-3 hover:border-navy-700 shadow-gov"
+            style={{ zIndex: 500 }}
             title="Recenter"
           >
             <Crosshair className="w-4 h-4 text-navy-700" />
@@ -314,7 +315,8 @@ export default function MapApp() {
         <button
           data-testid="open-report-btn"
           onClick={() => setShowReport(true)}
-          className="absolute left-3 bottom-44 z-20 bg-saffron text-ink rounded-full p-3 shadow-gov hover:scale-105 transition-transform"
+          className="absolute left-3 bottom-44 bg-saffron text-ink rounded-full p-3 shadow-gov hover:scale-105 transition-transform"
+          style={{ zIndex: 500 }}
           title="Report incident"
         >
           <AlertTriangle className="w-5 h-5" strokeWidth={2.5} />
@@ -324,7 +326,8 @@ export default function MapApp() {
         <button
           data-testid="ai-safety-chat-trigger"
           onClick={() => setShowChat(true)}
-          className="absolute left-3 bottom-28 z-30 bg-navy-700 hover:bg-navy-800 text-white rounded-full pl-3 pr-4 py-3 shadow-gov flex items-center gap-2"
+          className="absolute left-3 bottom-28 bg-navy-700 hover:bg-navy-800 text-white rounded-full pl-3 pr-4 py-3 shadow-gov flex items-center gap-2"
+          style={{ zIndex: 500 }}
         >
           <MessageCircle className="w-4 h-4" strokeWidth={2.5} />
           <span className="text-xs font-semibold">Aegis AI</span>
@@ -334,7 +337,8 @@ export default function MapApp() {
         <button
           data-testid="sos-panic-button"
           onClick={() => setShowSOS(true)}
-          className="absolute right-3 bottom-28 z-30 w-16 h-16 rounded-full bg-sos text-white font-heading font-bold text-base sos-pulse hover:scale-105 transition-transform flex flex-col items-center justify-center"
+          className="absolute right-3 bottom-28 w-16 h-16 rounded-full bg-sos text-white font-heading font-bold text-base sos-pulse hover:scale-105 transition-transform flex flex-col items-center justify-center"
+          style={{ zIndex: 500 }}
         >
           <Siren className="w-5 h-5" strokeWidth={2.5} />
           <span className="text-[10px] tracking-widest mt-0.5">SOS</span>

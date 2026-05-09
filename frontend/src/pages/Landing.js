@@ -1,14 +1,8 @@
 import React from "react";
-import { Shield, Siren, MapPin, MessageCircle, Users, AlertTriangle, ArrowRight, FileText, Phone, ExternalLink } from "lucide-react";
+import { Shield, Siren, MapPin, MessageCircle, Users, AlertTriangle, ArrowRight, FileText, Phone, Play } from "lucide-react";
 import { useAuth } from "../App";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Masthead, GovFooter } from "../components/GovChrome";
-
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-function startLogin() {
-  const redirectUrl = window.location.origin + "/app";
-  window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-}
 
 const SCHEMES = [
   { icon: MapPin, label: "Safe-Route Navigation", desc: "Walk routes scored by lighting, crowd & incident density." },
@@ -27,8 +21,14 @@ const STATS = [
 ];
 
 export default function Landing() {
-  const { user, loading } = useAuth();
+  const { user, loading, devLogin } = useAuth();
+  const navigate = useNavigate();
   if (!loading && user) return <Navigate to="/app" replace />;
+
+  const handleDemoLogin = async () => {
+    await devLogin();
+    navigate("/app");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink">
@@ -66,10 +66,11 @@ export default function Landing() {
             <div className="flex flex-wrap gap-3 items-center">
               <button
                 data-testid="get-started-btn"
-                onClick={startLogin}
+                onClick={handleDemoLogin}
                 className="group inline-flex items-center gap-2.5 bg-navy-700 hover:bg-navy-800 text-white font-semibold px-6 py-3 rounded text-sm shadow-gov transition-colors"
               >
-                Sign in with Google
+                <Play className="w-4 h-4" />
+                Enter Live Demo
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <a
