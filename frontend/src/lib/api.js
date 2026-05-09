@@ -60,7 +60,7 @@ SEED.forEach(([category, description, lat, lng, severity], i) => {
   });
 });
 
-// ─── Mock OSRM-style route generator ─────────────────────────────────────────
+// ─── Routing via real OSRM public API ────────────────────────────────────────
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371, toR = Math.PI / 180;
   const dLat = (lat2 - lat1) * toR, dLng = (lng2 - lng1) * toR;
@@ -68,24 +68,66 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-function _genRoute(origin, destination, offset = 0) {
-  // Build an intermediate polyline with a slight offset for variation
-  const n = 20;
-  const coords = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const lat = origin.lat + (destination.lat - origin.lat) * t
-      + offset * Math.sin(Math.PI * t) * 0.005;
-    const lng = origin.lng + (destination.lng - origin.lng) * t
-      + offset * Math.sin(Math.PI * t) * 0.003;
-    coords.push([lng, lat]);
-  }
-  return coords;
+/**
+ * Call OSRM (free public walking API) with optional via-waypoint for route variation.
+ * Returns [lng,lat] coordinate array of the actual road-following polyline.
+ */
+async function _osrmRoute(originLat, originLng, destLat, destLng, viaLat, viaLng) {
+  let coords = viaLat != null
+    ? `${originLng},${originLat};${viaLng},${viaLat};${destLng},${destLat}`
+    : `${originLng},${originLat};${destLng},${destLat}`;
+  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?geometries=geojson&overview=full&steps=false`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("OSRM error");
+  const data = await r.json();
+  if (data.code !== "Ok" || !data.routes?.length) throw new Error("No route");
+  const route = data.routes[0];
+  return {
+    geometry: route.geometry.coordinates,   // [[lng,lat], ...]
+    distance_m: route.distance,
+    duration_s: route.duration,
+  };
 }
 
-function _scoreRoute(coords, incidents, timeOfDay) {
+/**
+ * Pick a via-waypoint that steers clear of the worst incident clusters.
+ * For the "safer" variant we move perpendicular to the direct line to avoid hotspots.
+ * For the "longer detour" variant we swing wider.
+ */
+function _safeViaWaypoint(originLat, originLng, destLat, destLng, incidents, mode) {
+  // Midpoint
+  const midLat = (originLat + destLat) / 2;
+  const midLng = (originLng + destLng) / 2;
+
+  // Perpendicular direction (rotate direction vector 90°)
+  const dLat = destLat - originLat;
+  const dLng = destLng - originLng;
+  const len = Math.sqrt(dLat * dLat + dLng * dLng) || 1;
+  const perpLat = -dLng / len;
+  const perpLng = dLat / len;
+
+  // Large enough offsets to force OSRM onto genuinely different streets
+  // "safer" = ~2km perpendicular, "detour" = ~4km perpendicular
+  const magnitude = mode === "detour" ? 0.038 : 0.020;
+  const offsets = [magnitude, -magnitude];
+
+  let bestScore = Infinity, bestLat = midLat, bestLng = midLng;
+  for (const off of offsets) {
+    const vLat = midLat + perpLat * off;
+    const vLng = midLng + perpLng * off;
+    let score = 0;
+    incidents.filter(i => i.status === "active").forEach(inc => {
+      const d = haversineKm(inc.lat, inc.lng, vLat, vLng);
+      if (d < 0.8) score += inc.severity * (1 - d / 0.8);
+    });
+    if (score < bestScore) { bestScore = score; bestLat = vLat; bestLng = vLng; }
+  }
+  return { vLat: bestLat, vLng: bestLng };
+}
+
+function _scoreRoute(coords, incidents, timeOfDay, routeIndex = 0) {
   let nearby = 0, sevSum = 0;
-  const BUF = 0.3;
+  const BUF = 0.25;
   incidents.filter(i => i.status === "active").forEach(inc => {
     let minD = Infinity;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -94,14 +136,37 @@ function _scoreRoute(coords, incidents, timeOfDay) {
     }
     if (minD < BUF) { nearby++; sevSum += inc.severity; }
   });
-  const seed = (coords.slice(0, 5).reduce((s, c) => s + c[0] + c[1], 0) * 1000) % 1000;
-  let lighting = parseFloat((0.55 + (seed % 40) / 100).toFixed(2));
-  let crowd = parseFloat((0.40 + (seed % 55) / 100).toFixed(2));
-  if (timeOfDay === "night") { lighting = Math.max(0.15, lighting - 0.30); crowd = Math.max(0.15, crowd - 0.25); }
-  let base = 100 - Math.min(50, sevSum * 6) - Math.round((1 - lighting) * 30) - Math.round((1 - crowd) * 15);
-  if (timeOfDay === "night") base -= 6;
+
+  // Lighting/crowd: use total path length variation so each route differs
+  const totalLen = coords.reduce((s, c, i) => {
+    if (i === 0) return s;
+    return s + haversineKm(coords[i-1][1], coords[i-1][0], c[1], c[0]);
+  }, 0);
+  const seed = Math.round(totalLen * 137) % 100; // unique per route geometry
+  let lighting = parseFloat((0.50 + (seed % 45) / 100).toFixed(2));
+  let crowd    = parseFloat((0.38 + (seed % 50) / 100).toFixed(2));
+
+  // Night penalty — large, visible drop (~20-25 pts)
+  if (timeOfDay === "night") {
+    lighting = Math.max(0.10, lighting - 0.38);
+    crowd    = Math.max(0.10, crowd    - 0.32);
+  }
+
+  let base = 100
+    - Math.min(50, sevSum * 7)           // up to -50 for incident severity
+    - Math.round((1 - lighting) * 28)    // up to -28 for poor lighting
+    - Math.round((1 - crowd)    * 14);   // up to -14 for low crowd
+  if (timeOfDay === "night") base -= 12; // flat night penalty
+
   const score = Math.max(5, Math.min(100, base));
-  return { safety_score: score, level: score >= 75 ? "safe" : score >= 50 ? "caution" : "danger", nearby_incidents: nearby, incident_severity_sum: sevSum, lighting_score: lighting, crowd_density: crowd };
+  return {
+    safety_score: score,
+    level: score >= 75 ? "safe" : score >= 50 ? "caution" : "danger",
+    nearby_incidents: nearby,
+    incident_severity_sum: sevSum,
+    lighting_score: lighting,
+    crowd_density: crowd,
+  };
 }
 
 // ─── AI chat responses (hardcoded but realistic) ──────────────────────────────
@@ -242,23 +307,68 @@ export const api = {
       return _ok({ ok: true });
     }
 
-    // /routes/safest
+    // /routes/safest — real OSRM roads + incident-aware safety scoring
     if (path === "/routes/safest") {
       const { origin, destination, time_of_day } = body;
       const tod = time_of_day || (new Date().getHours() >= 19 || new Date().getHours() < 6 ? "night" : "day");
-      const routes = [-0.6, 0, 0.5].map((offset, idx) => {
-        const coords = _genRoute(origin, destination, offset);
-        const scored = _scoreRoute(coords, _store.incidents, tod);
-        const dist = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng) * (1 + Math.abs(offset) * 0.3);
-        return {
-          route_id: `r_${idx}`,
-          geometry: coords,
-          distance_km: parseFloat(dist.toFixed(2)),
-          duration_min: parseFloat((dist / 0.083).toFixed(1)), // ~5km/h walk
-          time_of_day: tod,
-          ...scored,
-        };
+
+      // Build 3 route variants using different via-waypoints through real road network
+      const routeConfigs = [
+        { id: "r_0", label: "Direct",       via: null },
+        { id: "r_1", label: "Safer detour", via: "safer" },
+        { id: "r_2", label: "Longer detour",via: "detour" },
+      ];
+
+      const routePromises = routeConfigs.map(async (cfg) => {
+        try {
+          let vLat = null, vLng = null;
+          if (cfg.via) {
+            const v = _safeViaWaypoint(origin.lat, origin.lng, destination.lat, destination.lng, _store.incidents, cfg.via);
+            vLat = v.vLat; vLng = v.vLng;
+          }
+          const osrm = await _osrmRoute(origin.lat, origin.lng, destination.lat, destination.lng, vLat, vLng);
+          const scored = _scoreRoute(osrm.geometry, _store.incidents, tod);
+          return {
+            route_id: cfg.id,
+            geometry: osrm.geometry,
+            distance_km: parseFloat((osrm.distance_m / 1000).toFixed(2)),
+            duration_min: parseFloat((osrm.duration_s / 60).toFixed(1)),
+            time_of_day: tod,
+            ...scored,
+          };
+        } catch {
+          return null;
+        }
       });
+
+      let routes = (await Promise.all(routePromises)).filter(Boolean);
+
+      // Deduplicate near-identical routes (OSRM may return same path for different vias)
+      routes = routes.filter((r, i) => {
+        if (i === 0) return true;
+        const prev = routes[i - 1];
+        const diff = Math.abs(r.distance_km - prev.distance_km);
+        return diff > 0.05; // keep only if meaningfully different distance
+      });
+
+      // If OSRM failed entirely (offline), fall back to straight-line approximation
+      if (routes.length === 0) {
+        [-0.5, 0, 0.4].forEach((off, idx) => {
+          const n = 30;
+          const coords = [];
+          for (let i = 0; i <= n; i++) {
+            const t = i / n;
+            coords.push([
+              origin.lng + (destination.lng - origin.lng) * t + off * Math.sin(Math.PI * t) * 0.008,
+              origin.lat + (destination.lat - origin.lat) * t + off * Math.sin(Math.PI * t) * 0.006,
+            ]);
+          }
+          const dist = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng) * (1 + Math.abs(off) * 0.25);
+          const scored = _scoreRoute(coords, _store.incidents, tod);
+          routes.push({ route_id: `r_${idx}`, geometry: coords, distance_km: parseFloat(dist.toFixed(2)), duration_min: parseFloat((dist / 0.083).toFixed(1)), time_of_day: tod, ...scored });
+        });
+      }
+
       routes.sort((a, b) => b.safety_score - a.safety_score || a.distance_km - b.distance_km);
       return _ok({ routes, time_of_day: tod });
     }
