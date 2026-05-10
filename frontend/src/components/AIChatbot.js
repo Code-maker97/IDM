@@ -35,7 +35,7 @@ export default function AIChatbot({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" data-testid="ai-chat-panel">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ zIndex: 1100 }} data-testid="ai-chat-panel">
       <div className="w-full sm:max-w-md h-[85vh] sm:h-[600px] bg-white sm:rounded-lg rounded-t-lg border border-rule flex flex-col slide-up shadow-gov overflow-hidden">
         <div className="h-1 bg-navy-700" />
         <header className="flex items-center justify-between p-4 border-b border-rule bg-canvas">

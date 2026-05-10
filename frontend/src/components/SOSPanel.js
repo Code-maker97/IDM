@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { X, Siren, Phone, CheckCircle2, AlertCircle, Loader2, MapPin } from "lucide-react";
 import { api } from "../lib/api";
 
-export default function SOSPanel({ myPos, onClose }) {
+export default function SOSPanel({ myPos, onClose, onManageContacts }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -34,7 +34,7 @@ export default function SOSPanel({ myPos, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" data-testid="sos-panel-overlay">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-4" style={{ zIndex: 1100 }} data-testid="sos-panel-overlay">
       <div className="w-full max-w-md bg-white border border-rule rounded-lg slide-up shadow-gov overflow-hidden">
         <div className="h-1 bg-sos" />
         <div className="p-5">
@@ -74,7 +74,7 @@ export default function SOSPanel({ myPos, onClose }) {
             </div>
             {!loading && contacts.length === 0 && (
               <div className="border border-saffron/50 bg-saffron/15 rounded p-3 text-xs text-ink">
-                No contacts yet. SOS still logs the alert and shows location to authorities.
+                No contacts yet. Add trusted contacts so SOS can alert them with your live location.
               </div>
             )}
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
@@ -91,6 +91,15 @@ export default function SOSPanel({ myPos, onClose }) {
                 </div>
               ))}
             </div>
+            {onManageContacts && (
+              <button
+                data-testid="manage-contacts-btn"
+                onClick={onManageContacts}
+                className="w-full mt-2 border border-dashed border-navy-700/40 rounded py-2.5 text-xs font-semibold text-navy-700 hover:bg-navy-50 hover:border-navy-700 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span className="text-base leading-none">+</span> Add / manage contacts
+              </button>
+            )}
           </div>
 
           {!result && (

@@ -32,7 +32,7 @@ export default function IncidentReportModal({ myPos, timeOfDay, onClose, onRepor
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-4" data-testid="report-modal">
+    <div className="fixed inset-0 bg-black/45 flex items-end sm:items-center justify-center p-4" style={{ zIndex: 1100 }} data-testid="report-modal">
       <div className="w-full max-w-md bg-white border border-rule rounded-lg shadow-gov slide-up overflow-hidden max-h-[90vh]">
         <div className="h-1 bg-saffron" />
         <div className="p-5 overflow-y-auto max-h-[calc(90vh-4px)]">

@@ -188,7 +188,15 @@ export default function MapApp() {
       <div className="relative flex-1">
         <MapContainer center={mapCenter} zoom={14} scrollWheelZoom className="h-full w-full" zoomControl={false}>
           <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="Streets">
+            <LayersControl.BaseLayer checked name="Dark">
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+                maxZoom={20}
+                subdomains="abcd"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Streets">
               <TileLayer
                 url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -200,13 +208,6 @@ export default function MapApp() {
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="Tiles &copy; Esri · Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP"
                 maxZoom={19}
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Terrain">
-              <TileLayer
-                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                attribution='Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
-                maxZoom={17}
               />
             </LayersControl.BaseLayer>
           </LayersControl>
@@ -363,7 +364,7 @@ export default function MapApp() {
       )}
 
       {/* Modals */}
-      {showSOS && <SOSPanel myPos={myPos} onClose={() => setShowSOS(false)} />}
+      {showSOS && <SOSPanel myPos={myPos} onClose={() => setShowSOS(false)} onManageContacts={() => { setShowSOS(false); setShowContacts(true); }} />}
       {showChat && <AIChatbot onClose={() => setShowChat(false)} />}
       {showReport && (
         <IncidentReportModal
